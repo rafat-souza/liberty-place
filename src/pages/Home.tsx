@@ -369,13 +369,13 @@ export default function Home() {
         </section>
       ) : (
         <section>
-          <h3 className="text-lg font-semibold mb-4">Recent Products</h3>
+          <h3 className="text-lg font-semibold mb-4">Recent Listings</h3>
           {isLoadingRecent ? (
             <p className="text-muted-foreground animate-pulse">
               Loading latest products...
             </p>
           ) : recentListings.length === 0 ? (
-            <p className="text-muted-foreground">No recent products found.</p>
+            <p className="text-muted-foreground">No recent listings found.</p>
           ) : (
             <div className="grid sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {recentListings.map((event) => (

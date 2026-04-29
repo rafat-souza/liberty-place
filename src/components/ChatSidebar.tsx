@@ -77,7 +77,7 @@ export function ChatSidebar() {
   return (
     <div className="fixed inset-x-0 bottom-0 z-50 pointer-events-none flex justify-end container mx-auto">
       <div
-        className={`pointer-events-auto w-[340px] h-[700px] max-h-[80vh] bg-card border border-border border-b-0 shadow-2xl rounded-t-xl flex flex-col transition-all duration-300 ease-out origin-bottom
+        className={`pointer-events-auto w-[340px] h-[70vh] bg-card border border-border border-b-0 shadow-2xl rounded-t-xl flex flex-col transition-all duration-300 ease-out origin-bottom
           ${isOpen ? "translate-y-0" : "translate-y-full pointer-events-none"}`}
       >
         {activeContact && activeContactData ? (

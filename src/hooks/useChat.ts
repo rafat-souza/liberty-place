@@ -145,7 +145,6 @@ export function useChat() {
   const sendMessage = useCallback(
     async (pubkey: string, content: string) => {
       if (!ndk || !currentUser) {
-        toast.error("You must be logged in to send messages.");
         return false;
       }
 

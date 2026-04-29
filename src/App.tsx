@@ -1,17 +1,18 @@
-import { Outlet } from "react-router-dom";
+import { Outlet, NavLink } from "react-router-dom";
+import toast, { Toaster } from "react-hot-toast";
+
 import { LoginButton } from "./components/LoginButton";
 import { ChatSidebar } from "./components/ChatSidebar";
 import { useNDK } from "./providers/NDKProvider";
-import { NavLink } from "react-router-dom";
-import { Toaster } from "react-hot-toast";
 import { useChatStore } from "./store/chatStore";
+import { useAuth } from "./providers/AuthProvider";
 
 import "./App.css";
 
 export default function App() {
   const { isConnected } = useNDK();
-
   const { toggleOpen, contacts } = useChatStore();
+  const { currentUser } = useAuth();
 
   if (!isConnected) {
     return (
@@ -20,6 +21,14 @@ export default function App() {
       </div>
     );
   }
+
+  const handleChatClick = () => {
+    if (!currentUser) {
+      toast.error("You must be logged in to send messages.");
+      return;
+    }
+    toggleOpen();
+  };
 
   const totalUnread = contacts.reduce(
     (sum, contact) => sum + contact.unreadCount,
@@ -39,7 +48,7 @@ export default function App() {
           </NavLink>
           <div className="flex items-center gap-8">
             <button
-              onClick={toggleOpen}
+              onClick={handleChatClick}
               className="relative p-2 rounded-full hover:bg-accent text-foreground transition-colors cursor-pointer"
               title="Messages"
             >
