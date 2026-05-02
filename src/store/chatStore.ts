@@ -17,14 +17,22 @@ export interface ChatMessage {
   isMine: boolean;
 }
 
+export interface ProductContext {
+  title: string;
+  image?: string;
+  listingId: string;
+}
+
 interface ChatState {
   isOpen: boolean;
   activeContact: string | null;
+  productContext: ProductContext | null;
   contacts: ChatContact[];
   messages: Record<string, ChatMessage[]>;
   setIsOpen: (open: boolean) => void;
   toggleOpen: () => void;
   setActiveContact: (pubkey: string | null) => void;
+  setProductContext: (context: ProductContext | null) => void;
   addOrUpdateContact: (pubkey: string, updates?: Partial<ChatContact>) => void;
   setContactProfile: (pubkey: string, profile: NDKUserProfile) => void;
   addMessage: (pubkey: string, message: ChatMessage) => void;
@@ -40,6 +48,7 @@ interface ChatState {
 export const useChatStore = create<ChatState>((set) => ({
   isOpen: false,
   activeContact: null,
+  productContext: null,
   contacts: [],
   messages: {},
 
@@ -48,6 +57,8 @@ export const useChatStore = create<ChatState>((set) => ({
   toggleOpen: () => set((state) => ({ isOpen: !state.isOpen })),
 
   setActiveContact: (pubkey) => set({ activeContact: pubkey }),
+
+  setProductContext: (context) => set({ productContext: context }),
 
   addOrUpdateContact: (pubkey, updates) =>
     set((state) => {

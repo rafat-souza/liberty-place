@@ -15,6 +15,8 @@ export function ChatSidebar() {
     activeContact,
     setActiveContact,
     markAsRead,
+    productContext,
+    setProductContext,
   } = useChatStore();
   const { sendMessage, activeContactMessages } = useChat();
   const [inputValue, setInputValue] = useState("");
@@ -30,17 +32,27 @@ export function ChatSidebar() {
   const handleSelectContact = (pubkey: string) => {
     setActiveContact(pubkey);
     markAsRead(pubkey);
+    setProductContext(null);
   };
 
   const handleBackToList = () => {
     setActiveContact(null);
+    setProductContext(null);
   };
 
   const handleSend = async () => {
     if (!inputValue.trim() || !activeContact) return;
-    const success = await sendMessage(activeContact, inputValue.trim());
+
+    let finalMessageText = inputValue.trim();
+    if (productContext) {
+      finalMessageText = `[Inquiring about: ${productContext.title}]\n\n${finalMessageText}`;
+    }
+
+    const success = await sendMessage(activeContact, finalMessageText);
+
     if (success) {
       setInputValue("");
+      setProductContext(null);
     }
   };
 
@@ -177,7 +189,37 @@ export function ChatSidebar() {
             </div>
 
             {/* Input */}
-            <div className="p-3 border-t border-border bg-card">
+            <div className="p-3 border-t border-border bg-card flex flex-col gap-2">
+              {productContext && (
+                <div className="flex items-center gap-2 p-2 bg-muted rounded-md border border-border relative animate-in fade-in slide-in-from-bottom-2">
+                  {productContext.image ? (
+                    <img
+                      src={productContext.image}
+                      alt="Product"
+                      className="w-8 h-8 object-cover rounded shrink-0"
+                    />
+                  ) : (
+                    <div className="w-8 h-8 bg-background rounded flex items-center justify-center shrink-0">
+                      <MessageSquare className="w-4 h-4 text-muted-foreground" />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <span className="text-[10px] text-muted-foreground block leading-none">
+                      Inquiring about:
+                    </span>
+                    <strong className="text-xs text-foreground truncate block leading-tight">
+                      {productContext.title}
+                    </strong>
+                  </div>
+                  <button
+                    onClick={() => setProductContext(null)}
+                    className="p-1 text-muted-foreground hover:text-destructive shrink-0 cursor-pointer"
+                    title="Remove context"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
               <div className="flex gap-2">
                 <input
                   type="text"
@@ -200,11 +242,17 @@ export function ChatSidebar() {
         ) : (
           /* Contacts List View */
           <div className="flex flex-col h-full">
-            <div className="p-4 border-b border-border">
+            <div className="p-4 border-b border-border flex justify-between">
               <h2 className="font-bold text-lg flex items-center gap-2">
                 <MessageSquare className="w-5 h-5" />
                 Messages
               </h2>
+              <button
+                onClick={toggleOpen}
+                className="p-1 ml-2 rounded hover:bg-muted text-muted-foreground transition-colors cursor-pointer shrink-0"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
 
             <div className="flex-1 overflow-y-auto">

@@ -78,10 +78,19 @@ export function ListingDetail() {
       return;
     }
 
-    const { setActiveContact, setIsOpen, addOrUpdateContact } =
-      useChatStore.getState();
+    const {
+      setActiveContact,
+      setIsOpen,
+      addOrUpdateContact,
+      setProductContext,
+    } = useChatStore.getState();
     addOrUpdateContact(event.pubkey, {
       profile: profile || undefined,
+    });
+    setProductContext({
+      title: title,
+      image: images.length > 0 ? images[0] : undefined,
+      listingId: id || "",
     });
     setActiveContact(event.pubkey);
     setIsOpen(true);
