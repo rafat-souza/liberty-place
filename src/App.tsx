@@ -1,18 +1,19 @@
 import { Outlet, NavLink } from "react-router-dom";
 import toast, { Toaster } from "react-hot-toast";
+import { useState } from "react";
 
 import { LoginButton } from "./components/LoginButton";
 import { ChatSidebar } from "./components/ChatSidebar";
 import { useNDK } from "./providers/NDKProvider";
 import { useChatStore } from "./store/chatStore";
 import { useAuth } from "./providers/AuthProvider";
-
-import "./App.css";
+import { Sidebar } from "./components/Sidebar";
 
 export default function App() {
   const { isConnected } = useNDK();
   const { toggleOpen, contacts } = useChatStore();
   const { currentUser } = useAuth();
+  const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
 
   if (!isConnected) {
     return (
@@ -84,7 +85,12 @@ export default function App() {
           </div>
         </div>
       </header>
+
       <div className="flex-1 flex relative overflow-hidden">
+        <Sidebar
+          isExpanded={isSidebarExpanded}
+          toggleSidebar={() => setIsSidebarExpanded(!isSidebarExpanded)}
+        />
         <main className="flex-1 overflow-y-auto p-4">
           <div className="container mx-auto">
             <Outlet />

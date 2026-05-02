@@ -10,6 +10,7 @@ import { Profile } from "./pages/Profile.tsx";
 import { ListingDetail } from "./pages/ListingDetail.tsx";
 import { SellerProfile } from "./pages/SellerProfile.tsx";
 import App from "./App.tsx";
+import { About } from "./pages/About.tsx";
 
 import "./index.css";
 
@@ -37,6 +38,10 @@ const router = createBrowserRouter([
       {
         path: "/seller/:pubkey",
         element: <SellerProfile />,
+      },
+      {
+        path: "/about",
+        element: <About />,
       },
     ],
   },
