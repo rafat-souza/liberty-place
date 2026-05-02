@@ -1,6 +1,13 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { MessageSquare, ChevronLeft, X, Send, User } from "lucide-react";
+import {
+  MessageSquare,
+  ChevronLeft,
+  X,
+  Send,
+  User,
+  ShoppingBag,
+} from "lucide-react";
 
 import { useChatStore } from "../store/chatStore";
 import { useChat } from "../hooks/useChat";
@@ -86,6 +93,22 @@ export function ChatSidebar() {
     }
   };
 
+  const parseMessage = (content: string) => {
+    const match = content.match(/^\[Inquiring about:\s*(.*?)\]\n\n([\s\S]*)$/);
+    if (match) {
+      return {
+        hasContext: true,
+        contextTitle: match[1],
+        actualMessage: match[2],
+      };
+    }
+    return {
+      hasContext: false,
+      contextTitle: null,
+      actualMessage: content,
+    };
+  };
+
   return (
     <div className="fixed inset-x-0 bottom-0 z-50 pointer-events-none flex justify-end container mx-auto">
       <div
@@ -150,6 +173,8 @@ export function ChatSidebar() {
                     formatDate(msg.createdAt) !==
                       formatDate(activeContactMessages[idx - 1].createdAt);
 
+                  const parsedData = parseMessage(msg.content);
+
                   return (
                     <div key={msg.id}>
                       {showDate && (
@@ -165,20 +190,45 @@ export function ChatSidebar() {
                         }`}
                       >
                         <div
-                          className={`max-w-[85%] px-3 py-2 rounded-lg text-sm
+                          className={`max-w-[85%] rounded-lg text-sm flex flex-col overflow-hidden
                             ${
                               msg.isMine
                                 ? "bg-primary text-primary-foreground rounded-br-none"
                                 : "bg-muted text-foreground rounded-bl-none"
                             }`}
                         >
-                          <p className="break-words">{msg.content}</p>
-                          <span
-                            className={`text-[10px] mt-1 block text-right
-                              ${msg.isMine ? "text-primary-foreground/70" : "text-muted-foreground"}`}
-                          >
-                            {formatTime(msg.createdAt)}
-                          </span>
+                          {/* Visual Context Block */}
+                          {parsedData.hasContext && (
+                            <div
+                              className={`flex items-center gap-2 p-2 border-b ${msg.isMine ? "bg-black/10 border-black/10" : "bg-background/50 border-border"} `}
+                            >
+                              <ShoppingBag
+                                className={`w-4 h-4 shrink-0 ${msg.isMine ? "text-primary-foreground/70" : "text-muted-foreground"}`}
+                              />
+                              <div className="min-w-0">
+                                <span
+                                  className={`text-[9px] block leading-none ${msg.isMine ? "text-primary-foreground/70" : "text-muted-foreground"}`}
+                                >
+                                  Inquiring about
+                                </span>
+                                <strong className="text-xs truncate block leading-tight">
+                                  {parsedData.contextTitle}
+                                </strong>
+                              </div>
+                            </div>
+                          )}
+
+                          <div className="p-3">
+                            <p className="break-words whitespace-pre-wrap">
+                              {parsedData.actualMessage}
+                            </p>
+                            <span
+                              className={`text-[10px] mt-1 block text-right
+                                ${msg.isMine ? "text-primary-foreground/70" : "text-muted-foreground"}`}
+                            >
+                              {formatTime(msg.createdAt)}
+                            </span>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -307,7 +357,10 @@ export function ChatSidebar() {
                           </div>
                           <div className="flex items-center justify-between mt-0.5">
                             <p className="text-xs text-muted-foreground truncate pr-2">
-                              {contact.lastMessage || "No messages"}
+                              {contact.lastMessage?.replace(
+                                /^\[Inquiring about:\s*(.*?)\]\n\n/,
+                                "",
+                              ) || "No messages"}
                             </p>
                             {contact.unreadCount > 0 && (
                               <span className="bg-primary text-primary-foreground text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0 min-w-[18px] text-center">
