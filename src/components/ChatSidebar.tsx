@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
+import { NDKEvent } from "@nostr-dev-kit/ndk";
 import {
   MessageSquare,
   ChevronLeft,
@@ -7,13 +9,17 @@ import {
   Send,
   User,
   ShoppingBag,
+  Paperclip,
+  Loader2,
 } from "lucide-react";
 
 import { useChatStore } from "../store/chatStore";
 import { useChat } from "../hooks/useChat";
 import { useAuth } from "../providers/AuthProvider";
+import { useNDK } from "../providers/NDKProvider";
 
 export function ChatSidebar() {
+  const { ndk } = useNDK();
   const { currentUser } = useAuth();
   const {
     isOpen,
@@ -25,9 +31,13 @@ export function ChatSidebar() {
     productContext,
     setProductContext,
   } = useChatStore();
+
   const { sendMessage, activeContactMessages } = useChat();
   const [inputValue, setInputValue] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -60,6 +70,79 @@ export function ChatSidebar() {
     if (success) {
       setInputValue("");
       setProductContext(null);
+    }
+  };
+
+  const handleFileUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file || !ndk) return;
+
+    if (file.size > 25 * 1024 * 1024) {
+      toast.error("File is too large. Limit is 25MB.");
+      return;
+    }
+
+    setIsUploading(true);
+    const toastId = toast.loading("Uploading media...");
+
+    try {
+      const uploadUrl = "https://nostr.build/api/v2/upload/files";
+
+      const authEvent = new NDKEvent(ndk);
+      authEvent.kind = 27235;
+      authEvent.tags = [
+        ["u", uploadUrl],
+        ["method", "POST"],
+      ];
+
+      await authEvent.sign();
+
+      const encodedEvent = btoa(
+        unescape(encodeURIComponent(JSON.stringify(authEvent.rawEvent()))),
+      );
+      const authHeader = `Nostr ${encodedEvent}`;
+
+      const formData = new FormData();
+      formData.append("fileToUpload", file);
+
+      const response = await fetch(uploadUrl, {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          Authorization: authHeader,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Upload failed with status: ${response.status}`);
+      }
+
+      const responseData = await response.json();
+
+      let fileUrl = "";
+      if (responseData?.data?.[0]?.url) {
+        fileUrl = responseData.data[0].url;
+      } else if (responseData?.url) {
+        fileUrl = responseData.url;
+      }
+
+      if (fileUrl) {
+        toast.success("Upload successful!", { id: toastId });
+        setInputValue((prev) => (prev ? `${prev}\n${fileUrl}` : fileUrl));
+      } else {
+        throw new Error("Upload response missing URL.");
+      }
+    } catch (error) {
+      console.error("Upload error:", error);
+      toast.error("Failed to upload file.", {
+        id: toastId,
+      });
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
@@ -107,6 +190,58 @@ export function ChatSidebar() {
       contextTitle: null,
       actualMessage: content,
     };
+  };
+
+  const renderMessageContent = (text: string) => {
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    const parts = text.split(urlRegex);
+
+    return (
+      <span className="break-words whitespace-pre-wrap">
+        {parts.map((part, i) => {
+          if (part.match(urlRegex)) {
+            if (part.match(/\.(jpeg|jpg|gif|png|webp)(\?.*)?$/i)) {
+              return (
+                <a
+                  key={i}
+                  href={part}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <img
+                    src={part}
+                    alt="Upload"
+                    className="max-w-full rounded-md my-2 max-h-64 object-cover border border-border"
+                  />
+                </a>
+              );
+            }
+            if (part.match(/\.(mp4|webm|ogg|mov)(\?.*)?$/i)) {
+              return (
+                <video
+                  key={i}
+                  src={part}
+                  controls
+                  className="max-w-full rounded-md my-2 max-h-64 border border-border bg-black"
+                />
+              );
+            }
+            return (
+              <a
+                key={i}
+                href={part}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline underline-offset-2 opacity-80 hover:opacity-100"
+              >
+                {part}
+              </a>
+            );
+          }
+          return <span key={i}>{part}</span>;
+        })}
+      </span>
+    );
   };
 
   return (
@@ -219,9 +354,8 @@ export function ChatSidebar() {
                           )}
 
                           <div className="p-3">
-                            <p className="break-words whitespace-pre-wrap">
-                              {parsedData.actualMessage}
-                            </p>
+                            {renderMessageContent(parsedData.actualMessage)}
+
                             <span
                               className={`text-[10px] mt-1 block text-right
                                 ${msg.isMine ? "text-primary-foreground/70" : "text-muted-foreground"}`}
@@ -238,7 +372,7 @@ export function ChatSidebar() {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Input */}
+            {/* Input Area */}
             <div className="p-3 border-t border-border bg-card flex flex-col gap-2">
               {productContext && (
                 <div className="flex items-center gap-2 p-2 bg-muted rounded-md border border-border relative animate-in fade-in slide-in-from-bottom-2">
@@ -270,19 +404,45 @@ export function ChatSidebar() {
                   </button>
                 </div>
               )}
-              <div className="flex gap-2">
+
+              <div className="flex gap-2 items-center">
+                <input
+                  type="file"
+                  accept="image/*,video/*"
+                  className="hidden"
+                  ref={fileInputRef}
+                  onChange={handleFileUpload}
+                />
+
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUploading}
+                  className="p-2 rounded-md bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer disabled:opacity-50 shrink-0"
+                  title="Attach file"
+                >
+                  {isUploading ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <Paperclip className="w-5 h-5" />
+                  )}
+                </button>
+
                 <input
                   type="text"
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleSend()}
-                  placeholder="Type a message..."
-                  className="flex-1 px-3 py-2 rounded-md bg-background border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                  placeholder={
+                    isUploading ? "Uploading file..." : "Type a message..."
+                  }
+                  disabled={isUploading}
+                  className="flex-1 px-3 py-2 rounded-md bg-background border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
                 />
+
                 <button
                   onClick={handleSend}
-                  disabled={!inputValue.trim()}
-                  className="p-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors cursor-pointer"
+                  disabled={!inputValue.trim() || isUploading}
+                  className="p-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors cursor-pointer shrink-0"
                 >
                   <Send className="w-4 h-4" />
                 </button>
