@@ -193,7 +193,7 @@ export function RelaySettings() {
       <div>
         <Link
           to="/settings"
-          className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-4 transition-colors"
+          className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-4 transition-colors mt-4"
         >
           <ChevronLeft className="w-4 h-4" />
           Back to Settings

@@ -5,7 +5,7 @@ export function Settings() {
   return (
     <div className="max-w-3xl mx-auto space-y-8 animate-in fade-in">
       <div>
-        <h1 className="text-4xl font-bold text-foreground">Settings</h1>
+        <h1 className="text-4xl font-bold text-foreground mt-4">Settings</h1>
         <p className="text-muted-foreground mt-2">
           Manage your app preferences and Nostr connections.
         </p>
