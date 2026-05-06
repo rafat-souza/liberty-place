@@ -196,9 +196,34 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const logout = useCallback(() => {
     if (ndk) {
       ndk.signer = undefined;
+
+      const defaultRelays = [
+        "wss://relay.damus.io",
+        "wss://nos.lol",
+        "wss://nostr.mom",
+      ];
+
+      const currentRelaysUrls = Array.from(ndk.pool.relays.keys());
+
+      currentRelaysUrls.forEach((url) => {
+        if (!defaultRelays.includes(url)) {
+          ndk.pool.removeRelay(url);
+        }
+      });
+
+      defaultRelays.forEach((url) => {
+        if (!ndk.pool.relays.has(url)) {
+          ndk.addExplicitRelay(url);
+        }
+      });
+
+      ndk.pool.connect();
     }
+
     setCurrentUser(null);
     localStorage.removeItem("nostr_login");
+
+    localStorage.removeItem("app_relays");
   }, [ndk]);
 
   return (
