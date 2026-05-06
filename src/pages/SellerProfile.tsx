@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { NDKEvent, type NDKUserProfile, NDKUser } from "@nostr-dev-kit/ndk";
+import { Zap } from "lucide-react";
+
 import { useNDK } from "../providers/NDKProvider";
 import { ListingCard } from "../components/ListingCard";
 
@@ -80,10 +82,10 @@ export function SellerProfile() {
           <img
             src={avatar}
             alt={name}
-            className="w-32 h-32 rounded-full object-cover border-4 border-background shadow-md"
+            className="w-32 h-32 rounded-full object-cover border-4 border-background shadow-md shrink-0"
           />
         ) : (
-          <div className="w-32 h-32 rounded-full bg-primary/10 flex items-center justify-center border-4 border-background shadow-md">
+          <div className="w-32 h-32 rounded-full bg-primary/10 flex items-center justify-center border-4 border-background shadow-md shrink-0">
             <span className="text-4xl font-bold text-primary">
               {name.substring(0, 2).toUpperCase()}
             </span>
@@ -92,6 +94,14 @@ export function SellerProfile() {
 
         <div className="flex-1 text-center md:text-left">
           <h2 className="text-2xl font-bold text-foreground">{name}</h2>
+
+          {profile?.lud16 && (
+            <p className="flex items-center justify-center md:justify-start gap-1.5 text-sm text-yellow-500 mt-1 font-medium">
+              <Zap className="w-4 h-4 fill-yellow-500" />
+              {profile.lud16}
+            </p>
+          )}
+
           <p className="text-muted-foreground mt-2 max-w-xl whitespace-pre-wrap">
             {bio}
           </p>
