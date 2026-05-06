@@ -1,5 +1,12 @@
 import { NavLink } from "react-router-dom";
-import { Home, Info, ChevronLeft, ChevronRight, Menu } from "lucide-react";
+import {
+  Home,
+  Info,
+  ChevronLeft,
+  ChevronRight,
+  Menu,
+  Settings,
+} from "lucide-react";
 
 interface SidebarProps {
   isExpanded: boolean;
@@ -45,6 +52,21 @@ export function Sidebar({ isExpanded, toggleSidebar }: SidebarProps) {
         >
           <Home className="w-5 h-5 shrink-0" />
           {isExpanded && <span>Home</span>}
+        </NavLink>
+
+        <NavLink
+          to="/settings"
+          className={({ isActive }) =>
+            `flex items-center gap-3 p-2 rounded-md transition-colors ${
+              isActive
+                ? "bg-primary/10 text-primary font-medium hover:text-[#FDC700]"
+                : "text-muted-foreground hover:bg-muted hover:text-[#FDC700] "
+            } ${!isExpanded && "justify-center"}`
+          }
+          title="Settings"
+        >
+          <Settings className="w-5 h-5 shrink-0" />
+          {isExpanded && <span>Settings</span>}
         </NavLink>
 
         <NavLink

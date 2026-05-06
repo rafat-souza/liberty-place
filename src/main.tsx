@@ -11,6 +11,8 @@ import { ListingDetail } from "./pages/ListingDetail.tsx";
 import { SellerProfile } from "./pages/SellerProfile.tsx";
 import App from "./App.tsx";
 import { About } from "./pages/About.tsx";
+import { Settings } from "./pages/Settings.tsx";
+import { RelaySettings } from "./pages/RelaySettings.tsx";
 
 import "./index.css";
 
@@ -42,6 +44,14 @@ const router = createBrowserRouter([
       {
         path: "/about",
         element: <About />,
+      },
+      {
+        path: "/settings",
+        element: <Settings />,
+      },
+      {
+        path: "/settings/relays",
+        element: <RelaySettings />,
       },
     ],
   },

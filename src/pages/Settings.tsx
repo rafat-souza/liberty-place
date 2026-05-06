@@ -1,0 +1,39 @@
+import { Link } from "react-router-dom";
+import { Server, ChevronRight } from "lucide-react";
+
+export function Settings() {
+  return (
+    <div className="max-w-3xl mx-auto space-y-8 animate-in fade-in">
+      <div>
+        <h1 className="text-4xl font-bold text-foreground">Settings</h1>
+        <p className="text-muted-foreground mt-2">
+          Manage your app preferences and Nostr connections.
+        </p>
+      </div>
+
+      <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
+        <div className="divide-y divide-border">
+          <Link
+            to="/settings/relays"
+            className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors"
+          >
+            <div className="flex items-center gap-4">
+              <div className="p-2 bg-primary/10 rounded-lg">
+                <Server className="w-6 h-6 text-primary" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-foreground">
+                  Relays
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  Manage your connections to the Nostr network
+                </p>
+              </div>
+            </div>
+            <ChevronRight className="w-5 h-5 text-muted-foreground" />
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
