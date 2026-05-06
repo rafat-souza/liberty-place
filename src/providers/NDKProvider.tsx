@@ -33,20 +33,29 @@ export const NDKProvider = ({ children }: { children: ReactNode }) => {
     if (isInitialized.current) return;
     isInitialized.current = true;
 
+    let activeRelays: string[] = [];
+    const savedRelaysJSON = localStorage.getItem("app_relays");
+
+    if (!savedRelaysJSON) {
+      activeRelays = [...defaultRelays];
+      localStorage.setItem("app_relays", JSON.stringify(activeRelays));
+    } else {
+      activeRelays = JSON.parse(savedRelaysJSON);
+    }
+
     const ndkInstance = new NDK({
-      explicitRelayUrls: defaultRelays,
+      explicitRelayUrls: activeRelays,
     });
 
     setNdk(ndkInstance);
 
     ndkInstance
       .connect(2500)
-      .then(() => setIsConnected(true))
+      .then(() => {
+        setIsConnected(true);
+      })
       .catch((error) => {
-        console.error(
-          "Falha em alguns relays, mas o NDK continuará tentando:",
-          error,
-        );
+        console.error("Some relays failed, but NDK will still try:", error);
         setIsConnected(true);
       });
   }, []);

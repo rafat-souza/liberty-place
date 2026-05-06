@@ -52,10 +52,75 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         await user.fetchProfile();
         ndk.signer = signer;
         setCurrentUser(user);
+
+        await syncNetworkRelays(user);
       }
     } catch (error) {
       console.error("An error occurred retoring session: ", error);
       logout();
+    }
+  };
+
+  const syncExtensionRelays = async () => {
+    if (!ndk || !window.nostr || !window.nostr.getRelays) return;
+    try {
+      const extRelays = await window.nostr.getRelays();
+      const extUrls = Object.keys(extRelays);
+
+      if (extUrls.length > 0) {
+        applyRelaysToPool(extUrls);
+      }
+    } catch (e) {
+      console.error("Failed to sync extension relays:", e);
+    }
+  };
+
+  const syncNetworkRelays = async (user: NDKUser) => {
+    if (!ndk) return;
+    try {
+      console.log("Buscando Kind 10002 (NIP-65)...");
+      const relayListEvent = await ndk.fetchEvent({
+        kinds: [10002],
+        authors: [user.pubkey],
+      });
+
+      if (relayListEvent && relayListEvent.tags.length > 0) {
+        const networkUrls = relayListEvent.tags
+          .filter((tag) => tag[0] === "r" && tag[1])
+          .map((tag) => tag[1]);
+
+        console.log("Relays encontrados no Kind 10002:", networkUrls);
+        if (networkUrls.length > 0) {
+          applyRelaysToPool(networkUrls);
+          return;
+        }
+      }
+
+      console.log("Nenhum 10002 encontrado, tentando puxar da extensão...");
+      await syncExtensionRelays();
+    } catch (error) {
+      console.error("Erro ao buscar Kind 10002:", error);
+      await syncExtensionRelays();
+    }
+  };
+
+  const applyRelaysToPool = (urls: string[]) => {
+    if (!ndk) return;
+    const currentSaved = JSON.parse(localStorage.getItem("app_relays") || "[]");
+    const newSaved = new Set<string>(currentSaved);
+    let addedNew = false;
+
+    urls.forEach((url) => {
+      const normalizedUrl = url.toLowerCase().trim();
+      if (!ndk.pool.relays.has(normalizedUrl)) {
+        ndk.addExplicitRelay(normalizedUrl);
+        newSaved.add(normalizedUrl);
+        addedNew = true;
+      }
+    });
+
+    if (addedNew) {
+      localStorage.setItem("app_relays", JSON.stringify(Array.from(newSaved)));
     }
   };
 
@@ -80,6 +145,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           "nostr_login",
           JSON.stringify({ method: "extension" }),
         );
+
+        await syncNetworkRelays(user);
       }
     } catch (error) {
       console.error("Authenticating error:", error);
@@ -113,6 +180,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             "nostr_login",
             JSON.stringify({ method: "nsec", key: hexKey }),
           );
+
+          await syncNetworkRelays(user);
         }
       } catch (error) {
         console.error("An error occurred to authenticate nsec: ", error);

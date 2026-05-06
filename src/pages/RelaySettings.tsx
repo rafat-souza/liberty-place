@@ -1,20 +1,61 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
-import { useNDK } from "../providers/NDKProvider";
 import toast from "react-hot-toast";
 import { Server, Plus, Trash2, ChevronLeft } from "lucide-react";
+import { NDKEvent, type NDKRelay } from "@nostr-dev-kit/ndk";
+
+import { useNDK } from "../providers/NDKProvider";
+import { useAuth } from "../providers/AuthProvider";
+
+type RelayStatus = "connecting" | "connected" | "disconnected";
+
+interface RelayData {
+  url: string;
+  status: RelayStatus;
+  rawStatus: any;
+}
 
 export function RelaySettings() {
   const { ndk } = useNDK();
-  const [relays, setRelays] = useState<string[]>([]);
+  const { currentUser } = useAuth();
+  const [relaysData, setRelaysData] = useState<RelayData[]>([]);
   const [newRelay, setNewRelay] = useState("");
   const [isAdding, setIsAdding] = useState(false);
 
-  const updateRelaysList = () => {
-    if (!ndk) return;
-    const connectedRelays = Array.from(ndk.pool.relays.keys());
-    setRelays(connectedRelays);
+  const getStatusString = (relay: any): RelayStatus => {
+    const s = relay.status;
+    const wsStatus = relay.connectivity?.ws?.readyState;
+
+    if (s === 1 || s === 6 || s === 7) return "connected";
+    if (s === 0 || s === 4) return "connecting";
+
+    if (typeof s === "string") {
+      const up = s.toUpperCase();
+      if (up === "CONNECTED" || up.includes("AUTH")) return "connected";
+      if (up === "CONNECTING" || up === "RECONNECTING") return "connecting";
+    }
+
+    if (wsStatus === 1) return "connected";
+    if (wsStatus === 0) return "connecting";
+
+    return "disconnected";
   };
+
+  const updateRelaysList = useCallback(() => {
+    if (!ndk) return;
+
+    const relayObjects = Array.from(ndk.pool.relays.values());
+    const mappedRelays = relayObjects.map((relay) => ({
+      url: relay.url,
+      status: getStatusString(relay),
+      rawStatus:
+        relay.status !== undefined
+          ? relay.status
+          : (relay as any).connectivity?.ws?.readyState,
+    }));
+
+    setRelaysData(mappedRelays);
+  }, [ndk]);
 
   useEffect(() => {
     updateRelaysList();
@@ -22,15 +63,39 @@ export function RelaySettings() {
     if (ndk) {
       ndk.pool.on("relay:connect", updateRelaysList);
       ndk.pool.on("relay:disconnect", updateRelaysList);
+      ndk.pool.on("relay:ready", updateRelaysList);
+      ndk.pool.on("relay:auth", updateRelaysList);
     }
+
+    const interval = setInterval(() => {
+      updateRelaysList();
+    }, 2000);
 
     return () => {
       if (ndk) {
         ndk.pool.removeAllListeners("relay:connect");
         ndk.pool.removeAllListeners("relay:disconnect");
+        ndk.pool.removeAllListeners("relay:ready");
+        ndk.pool.removeAllListeners("relay:auth");
       }
+      clearInterval(interval);
     };
-  }, [ndk]);
+  }, [ndk, updateRelaysList]);
+
+  const publishRelayListToNetwork = async (urlsToSave: string[]) => {
+    if (!ndk || !currentUser) return;
+
+    try {
+      const event = new NDKEvent(ndk);
+      event.kind = 10002;
+      event.tags = urlsToSave.map((url) => ["r", url]);
+
+      await event.publish();
+      console.log("[NIP-65] Lista de Relays salva na rede com sucesso!");
+    } catch (error) {
+      console.error("[NIP-65] Falha ao salvar relays na rede:", error);
+    }
+  };
 
   const handleAddRelay = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,12 +110,16 @@ export function RelaySettings() {
       return;
     }
 
-    if (relays.includes(url)) {
+    if (relaysData.some((r) => r.url === url)) {
       toast.error("Relay is already in your list!");
       return;
     }
 
     setIsAdding(true);
+    setRelaysData((prev) => [
+      ...prev,
+      { url, status: "connecting", rawStatus: 0 },
+    ]);
     const toastId = toast.loading("Connecting to relay...");
 
     try {
@@ -59,38 +128,64 @@ export function RelaySettings() {
 
       toast.success("Relay added and connected!", { id: toastId });
       setNewRelay("");
-      updateRelaysList();
 
       const savedRelays = JSON.parse(
-        localStorage.getItem("customRelays") || "[]",
+        localStorage.getItem("app_relays") || "[]",
       );
+      let newSavedList = savedRelays;
+
       if (!savedRelays.includes(url)) {
-        localStorage.setItem(
-          "customRelays",
-          JSON.stringify([...savedRelays, url]),
-        );
+        newSavedList = [...savedRelays, url];
+        localStorage.setItem("app_relays", JSON.stringify(newSavedList));
       }
+
+      await publishRelayListToNetwork(newSavedList);
     } catch (error) {
       console.error("Failed to add relay:", error);
       toast.error("Failed to connect to relay.", { id: toastId });
       ndk.pool.removeRelay(url);
     } finally {
       setIsAdding(false);
+      updateRelaysList();
     }
   };
 
-  const handleRemoveRelay = (url: string) => {
+  const handleRemoveRelay = async (url: string) => {
     if (!ndk) return;
 
     ndk.pool.removeRelay(url);
     updateRelaysList();
     toast.success("Relay removed");
 
-    const savedRelays = JSON.parse(
-      localStorage.getItem("customRelays") || "[]",
-    );
+    const savedRelays = JSON.parse(localStorage.getItem("app_relays") || "[]");
     const updatedSaved = savedRelays.filter((r: string) => r !== url);
-    localStorage.setItem("customRelays", JSON.stringify(updatedSaved));
+    localStorage.setItem("app_relays", JSON.stringify(updatedSaved));
+
+    await publishRelayListToNetwork(updatedSaved);
+  };
+
+  const StatusDot = ({ status }: { status: RelayStatus }) => {
+    if (status === "connected") {
+      return (
+        <span className="relative flex h-3 w-3" title="Connected">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+          <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+        </span>
+      );
+    }
+    if (status === "connecting") {
+      return (
+        <span className="relative flex h-3 w-3" title="Connecting...">
+          <span className="animate-pulse absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
+          <span className="relative inline-flex rounded-full h-3 w-3 bg-yellow-500"></span>
+        </span>
+      );
+    }
+    return (
+      <span className="relative flex h-3 w-3" title="Disconnected">
+        <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+      </span>
+    );
   };
 
   return (
@@ -106,8 +201,17 @@ export function RelaySettings() {
         <h1 className="text-4xl font-bold text-foreground">
           Relay Configuration
         </h1>
-        <p className="text-muted-foreground mt-2">
+        <p className="text-muted-foreground mt-4">
           Manage the servers that power your decentralized Nostr network.
+        </p>
+        <p className="text-muted-foreground mt-2">
+          Changes here are automatically synced to your Nostr profile (NIP-65).
+        </p>
+        <p className="text-muted-foreground mt-2">
+          You can search for relays at:{" "}
+          <a className="text-white" href="https://nostr.watch" target="_blank">
+            https://nostr.watch
+          </a>
         </p>
       </div>
 
@@ -120,7 +224,7 @@ export function RelaySettings() {
             </h2>
           </div>
           <p className="text-sm text-muted-foreground mb-6">
-            You are currently connected to {relays.length} relays.
+            You have {relaysData.length} relays configured.
           </p>
 
           <form onSubmit={handleAddRelay} className="flex gap-3">
@@ -149,27 +253,31 @@ export function RelaySettings() {
         </div>
 
         <div className="divide-y divide-border">
-          {relays.length === 0 ? (
+          {relaysData.length === 0 ? (
             <div className="p-6 text-center text-muted-foreground text-sm">
               No relays connected.
             </div>
           ) : (
-            relays.map((url) => (
+            relaysData.map((relay) => (
               <div
-                key={url}
+                key={relay.url}
                 className="p-4 px-6 flex items-center justify-between hover:bg-muted/30 transition-colors"
               >
-                <div className="flex items-center gap-3">
-                  <span className="relative flex h-3 w-3">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
-                  </span>
-                  <span className="font-medium text-sm text-foreground">
-                    {url}
-                  </span>
+                <div className="flex items-center gap-4">
+                  <StatusDot status={relay.status} />
+
+                  <div className="flex flex-col">
+                    <span className="font-medium text-sm text-foreground">
+                      {relay.url}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground uppercase">
+                      {relay.status}
+                    </span>
+                  </div>
                 </div>
+
                 <button
-                  onClick={() => handleRemoveRelay(url)}
+                  onClick={() => handleRemoveRelay(relay.url)}
                   className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-md transition-colors cursor-pointer"
                   title="Remove Relay"
                 >
