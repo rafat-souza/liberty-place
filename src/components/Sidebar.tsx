@@ -1,6 +1,7 @@
 import { NavLink } from "react-router-dom";
 import {
   Home,
+  Wallet,
   Info,
   ChevronLeft,
   ChevronRight,
@@ -27,7 +28,7 @@ export function Sidebar({ isExpanded, toggleSidebar }: SidebarProps) {
         )}
         <button
           onClick={toggleSidebar}
-          className="p-1 rounded hover:bg-muted text-muted-foreground transition-colors cursor-pointer"
+          className="p-1 rounded hover:bg-muted text-muted-foreground transition-colors cursor-pointer hover:text-[#FDC700]"
           title={isExpanded ? "Collapse Sidebar" : "Expand Sidebar"}
         >
           {isExpanded ? (
@@ -42,10 +43,10 @@ export function Sidebar({ isExpanded, toggleSidebar }: SidebarProps) {
         <NavLink
           to="/"
           className={({ isActive }) =>
-            `flex items-center gap-3 p-2 rounded-md transition-colors ${
+            `flex items-center gap-3 p-2 rounded-md transition-colors hover:text-[#FDC700] ${
               isActive
-                ? "bg-primary/10 text-primary font-medium hover:text-[#FDC700]"
-                : "text-muted-foreground hover:bg-muted hover:text-[#FDC700]"
+                ? "bg-primary/10 text-primary font-medium"
+                : "text-muted-foreground hover:bg-muted"
             } ${!isExpanded && "justify-center"}`
           }
           title="Home"
@@ -55,12 +56,27 @@ export function Sidebar({ isExpanded, toggleSidebar }: SidebarProps) {
         </NavLink>
 
         <NavLink
+          to="/wallet"
+          className={({ isActive }) =>
+            `flex items-center gap-3 p-2 rounded-md transition-colors hover:text-[#FDC700]  ${
+              isActive
+                ? "bg-primary/10 text-primary font-medium"
+                : "text-muted-foreground hover:bg-muted"
+            } ${!isExpanded && "justify-center"}`
+          }
+          title="Wallet"
+        >
+          <Wallet className="w-5 h-5 shrink-0" />
+          {isExpanded && <span>Wallet</span>}
+        </NavLink>
+
+        <NavLink
           to="/settings"
           className={({ isActive }) =>
-            `flex items-center gap-3 p-2 rounded-md transition-colors ${
+            `flex items-center gap-3 p-2 rounded-md transition-colors hover:text-[#FDC700]  ${
               isActive
-                ? "bg-primary/10 text-primary font-medium hover:text-[#FDC700]"
-                : "text-muted-foreground hover:bg-muted hover:text-[#FDC700] "
+                ? "bg-primary/10 text-primary font-medium"
+                : "text-muted-foreground hover:bg-muted"
             } ${!isExpanded && "justify-center"}`
           }
           title="Settings"
@@ -72,10 +88,10 @@ export function Sidebar({ isExpanded, toggleSidebar }: SidebarProps) {
         <NavLink
           to="/about"
           className={({ isActive }) =>
-            `flex items-center gap-3 p-2 rounded-md transition-colors ${
+            `flex items-center gap-3 p-2 rounded-md transition-colors hover:text-[#FDC700]  ${
               isActive
-                ? "bg-primary/10 text-primary font-medium hover:text-[#FDC700]"
-                : "text-muted-foreground hover:bg-muted hover:text-[#FDC700]"
+                ? "bg-primary/10 text-primary font-medium"
+                : "text-muted-foreground hover:bg-muted"
             } ${!isExpanded && "justify-center"}`
           }
           title="About"

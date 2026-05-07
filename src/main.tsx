@@ -13,6 +13,7 @@ import App from "./App.tsx";
 import { About } from "./pages/About.tsx";
 import { Settings } from "./pages/Settings.tsx";
 import { RelaySettings } from "./pages/RelaySettings.tsx";
+import { Wallet } from "./pages/Wallet.tsx";
 
 import "./index.css";
 
@@ -52,6 +53,10 @@ const router = createBrowserRouter([
       {
         path: "/settings/relays",
         element: <RelaySettings />,
+      },
+      {
+        path: "/wallet",
+        element: <Wallet />,
       },
     ],
   },

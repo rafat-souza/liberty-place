@@ -68,7 +68,10 @@ export default function App() {
               </svg>
 
               {totalUnread > 0 && (
-                <span className="absolute top-0 right-0 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white shadow-sm">
+                <span
+                  className="absolute top-0 right-0 flex h-4 w-4 items-center justify-center rounded-full bg-red-500
+                 text-[10px] font-bold text-white shadow-sm"
+                >
                   {totalUnread > 99 ? "99+" : totalUnread}
                 </span>
               )}
