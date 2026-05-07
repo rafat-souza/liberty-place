@@ -222,7 +222,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     setCurrentUser(null);
     localStorage.removeItem("nostr_login");
-
     localStorage.removeItem("app_relays");
   }, [ndk]);
 

@@ -10,21 +10,31 @@ import {
   Eye,
   EyeOff,
 } from "lucide-react";
+import { useAuth } from "../providers/AuthProvider";
 
 export function Wallet() {
+  const { currentUser } = useAuth();
   const [nwcUrl, setNwcUrl] = useState("");
   const [savedUrl, setSavedUrl] = useState<string | null>(null);
   const [showSecret, setShowSecret] = useState(false);
 
   useEffect(() => {
-    const stored = localStorage.getItem("nwc_url");
+    if (!currentUser) {
+      setSavedUrl(null);
+      setShowSecret(false);
+      return;
+    }
+
+    const stored = localStorage.getItem(`nwc_url_${currentUser.pubkey}`);
     if (stored) {
       setSavedUrl(stored);
     }
-  }, []);
+  }, [currentUser]);
 
   const handleConnect = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!currentUser) return;
+
     const url = nwcUrl.trim();
 
     if (!url) return;
@@ -34,14 +44,16 @@ export function Wallet() {
       return;
     }
 
-    localStorage.setItem("nwc_url", url);
+    localStorage.setItem(`nwc_url_${currentUser.pubkey}`, url);
     setSavedUrl(url);
     setNwcUrl("");
     toast.success("Wallet connected successfully!");
   };
 
   const handleDisconnect = () => {
-    localStorage.removeItem("nwc_url");
+    if (!currentUser) return;
+
+    localStorage.removeItem(`nwc_url_${currentUser.pubkey}`);
     setSavedUrl(null);
     setShowSecret(false);
     toast.success("Wallet disconnected.");
@@ -54,6 +66,14 @@ export function Wallet() {
     }
     return "••••••••••••••••••••••••••••••••••••••••••••";
   };
+
+  if (!currentUser) {
+    return (
+      <p className="p-8 text-center text-muted-foreground">
+        Please log in to manage your wallet connection.
+      </p>
+    );
+  }
 
   return (
     <div className="max-w-3xl mx-auto space-y-8 animate-in fade-in">
