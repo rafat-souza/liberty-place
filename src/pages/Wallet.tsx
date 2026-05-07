@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
+import { NWCClient } from "@getalby/sdk/nwc";
 import {
   Wallet as WalletIcon,
   Zap,
@@ -9,19 +10,28 @@ import {
   Link as LinkIcon,
   Eye,
   EyeOff,
+  Coins,
+  Loader2,
 } from "lucide-react";
 import { useAuth } from "../providers/AuthProvider";
 
 export function Wallet() {
   const { currentUser } = useAuth();
+
   const [nwcUrl, setNwcUrl] = useState("");
   const [savedUrl, setSavedUrl] = useState<string | null>(null);
   const [showSecret, setShowSecret] = useState(false);
+  const [showBalance, setShowBalance] = useState(false);
+
+  const [balance, setBalance] = useState<number | null>(null);
+  const [isFetchingBalance, setIsFetchingBalance] = useState(false);
 
   useEffect(() => {
     if (!currentUser) {
       setSavedUrl(null);
       setShowSecret(false);
+      setShowBalance(false);
+      setBalance(null);
       return;
     }
 
@@ -30,6 +40,32 @@ export function Wallet() {
       setSavedUrl(stored);
     }
   }, [currentUser]);
+
+  useEffect(() => {
+    if (!savedUrl) {
+      setBalance(null);
+      return;
+    }
+
+    const fetchBalance = async () => {
+      setIsFetchingBalance(true);
+      try {
+        const nwcClient = new NWCClient({ nostrWalletConnectUrl: savedUrl });
+        const response = await nwcClient.getBalance();
+
+        if (response && typeof response.balance === "number") {
+          setBalance(response.balance);
+        }
+      } catch (error) {
+        console.error("Falha ao buscar saldo via NWC:", error);
+        setBalance(null);
+      } finally {
+        setIsFetchingBalance(false);
+      }
+    };
+
+    fetchBalance();
+  }, [savedUrl]);
 
   const handleConnect = (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,6 +92,8 @@ export function Wallet() {
     localStorage.removeItem(`nwc_url_${currentUser.pubkey}`);
     setSavedUrl(null);
     setShowSecret(false);
+    setShowBalance(false);
+    setBalance(null);
     toast.success("Wallet disconnected.");
   };
 
@@ -100,9 +138,38 @@ export function Wallet() {
                   <h2 className="text-xl font-semibold text-foreground">
                     Wallet Connected
                   </h2>
-                  <p className="text-sm text-muted-foreground">
-                    Your app is ready to send payments automatically.
-                  </p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Coins className="w-4 h-4 text-yellow-500" />
+                    {isFetchingBalance ? (
+                      <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                    ) : balance !== null ? (
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-foreground">
+                          {showBalance
+                            ? `${balance.toLocaleString()} sats`
+                            : "•••••••• sats"}
+                        </span>
+                        <button
+                          onClick={() => setShowBalance(!showBalance)}
+                          className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                          title={showBalance ? "Hide balance" : "Show balance"}
+                        >
+                          {showBalance ? (
+                            <EyeOff className="w-4 h-4" />
+                          ) : (
+                            <Eye className="w-4 h-4" />
+                          )}
+                        </button>
+                      </div>
+                    ) : (
+                      <span
+                        className="text-sm text-muted-foreground"
+                        title="The current NWC string does not have 'get_balance' permissions."
+                      >
+                        Balance hidden (permission denied by your wallet)
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
               <button
