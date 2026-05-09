@@ -1,25 +1,15 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import toast from "react-hot-toast";
-import { NDKEvent } from "@nostr-dev-kit/ndk";
-import {
-  MessageSquare,
-  ChevronLeft,
-  X,
-  Send,
-  User,
-  ShoppingBag,
-  Paperclip,
-  Loader2,
-} from "lucide-react";
+import { MessageSquare, ChevronLeft, X, User, ShoppingBag } from "lucide-react";
 
 import { useChatStore } from "../store/chatStore";
 import { useChat } from "../hooks/useChat";
 import { useAuth } from "../providers/AuthProvider";
-import { useNDK } from "../providers/NDKProvider";
+
+import { ChatInputBar } from "./ChatInputBar";
+import { ChatSatsPayment } from "./ChatSatsPayment";
 
 export function ChatSidebar() {
-  const { ndk } = useNDK();
   const { currentUser } = useAuth();
   const {
     isOpen,
@@ -34,10 +24,8 @@ export function ChatSidebar() {
 
   const { sendMessage, activeContactMessages } = useChat();
   const [inputValue, setInputValue] = useState("");
-  const [isUploading, setIsUploading] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -73,79 +61,6 @@ export function ChatSidebar() {
     }
   };
 
-  const handleFileUpload = async (
-    event: React.ChangeEvent<HTMLInputElement>,
-  ) => {
-    const file = event.target.files?.[0];
-    if (!file || !ndk) return;
-
-    if (file.size > 25 * 1024 * 1024) {
-      toast.error("File is too large. Limit is 25MB.");
-      return;
-    }
-
-    setIsUploading(true);
-    const toastId = toast.loading("Uploading media...");
-
-    try {
-      const uploadUrl = "https://nostr.build/api/v2/upload/files";
-
-      const authEvent = new NDKEvent(ndk);
-      authEvent.kind = 27235;
-      authEvent.tags = [
-        ["u", uploadUrl],
-        ["method", "POST"],
-      ];
-
-      await authEvent.sign();
-
-      const encodedEvent = btoa(
-        unescape(encodeURIComponent(JSON.stringify(authEvent.rawEvent()))),
-      );
-      const authHeader = `Nostr ${encodedEvent}`;
-
-      const formData = new FormData();
-      formData.append("fileToUpload", file);
-
-      const response = await fetch(uploadUrl, {
-        method: "POST",
-        headers: {
-          Accept: "application/json",
-          Authorization: authHeader,
-        },
-        body: formData,
-      });
-
-      if (!response.ok) {
-        throw new Error(`Upload failed with status: ${response.status}`);
-      }
-
-      const responseData = await response.json();
-
-      let fileUrl = "";
-      if (responseData?.data?.[0]?.url) {
-        fileUrl = responseData.data[0].url;
-      } else if (responseData?.url) {
-        fileUrl = responseData.url;
-      }
-
-      if (fileUrl) {
-        toast.success("Upload successful!", { id: toastId });
-        setInputValue((prev) => (prev ? `${prev}\n${fileUrl}` : fileUrl));
-      } else {
-        throw new Error("Upload response missing URL.");
-      }
-    } catch (error) {
-      console.error("Upload error:", error);
-      toast.error("Failed to upload file.", {
-        id: toastId,
-      });
-    } finally {
-      setIsUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
-    }
-  };
-
   const handleGoToProfile = () => {
     if (!activeContact) return;
     toggleOpen();
@@ -177,22 +92,44 @@ export function ChatSidebar() {
   };
 
   const parseMessage = (content: string) => {
-    const match = content.match(/^\[Inquiring about:\s*(.*?)\]\n\n([\s\S]*)$/);
-    if (match) {
-      return {
-        hasContext: true,
-        contextTitle: match[1],
-        actualMessage: match[2],
-      };
+    let hasContext = false;
+    let contextTitle = null;
+    let actualMessage = content;
+    let isLightningRequest = false;
+    let satsAmount = null;
+    let invoice = null;
+
+    const productMatch = actualMessage.match(
+      /^\[Inquiring about:\s*(.*?)\]\n\n([\s\S]*)$/,
+    );
+    if (productMatch) {
+      hasContext = true;
+      contextTitle = productMatch[1];
+      actualMessage = productMatch[2];
     }
+
+    const lnMatch = actualMessage.match(
+      /^\[Lightning Request:\s*(\d+)\s*sats\]\n\nlightning:(lnbc[\w\d]+)$/i,
+    );
+    if (lnMatch) {
+      isLightningRequest = true;
+      satsAmount = lnMatch[1];
+      invoice = lnMatch[2];
+      actualMessage = "";
+    }
+
     return {
-      hasContext: false,
-      contextTitle: null,
-      actualMessage: content,
+      hasContext,
+      contextTitle,
+      actualMessage,
+      isLightningRequest,
+      satsAmount,
+      invoice,
     };
   };
 
   const renderMessageContent = (text: string) => {
+    if (!text) return null;
     const urlRegex = /(https?:\/\/[^\s]+)/g;
     const parts = text.split(urlRegex);
 
@@ -251,7 +188,6 @@ export function ChatSidebar() {
           ${isOpen ? "translate-y-0" : "translate-y-full pointer-events-none"}`}
       >
         {activeContact && activeContactData ? (
-          /* Conversation View */
           <div className="flex flex-col h-full">
             <div className="flex items-center gap-3 p-4 border-b border-border bg-card">
               <button
@@ -295,7 +231,6 @@ export function ChatSidebar() {
               </button>
             </div>
 
-            {/* Messages */}
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
               {activeContactMessages.length === 0 ? (
                 <p className="text-center text-muted-foreground text-sm py-8">
@@ -332,7 +267,6 @@ export function ChatSidebar() {
                                 : "bg-muted text-foreground rounded-bl-none"
                             }`}
                         >
-                          {/* Visual Context Block */}
                           {parsedData.hasContext && (
                             <div
                               className={`flex items-center gap-2 p-2 border-b ${msg.isMine ? "bg-black/10 border-black/10" : "bg-background/50 border-border"} `}
@@ -354,7 +288,17 @@ export function ChatSidebar() {
                           )}
 
                           <div className="p-3">
-                            {renderMessageContent(parsedData.actualMessage)}
+                            {parsedData.isLightningRequest && (
+                              <ChatSatsPayment
+                                invoice={parsedData.invoice!}
+                                satsAmount={parsedData.satsAmount!}
+                                isMine={msg.isMine}
+                                currentUserPubkey={currentUser.pubkey}
+                              />
+                            )}
+
+                            {parsedData.actualMessage &&
+                              renderMessageContent(parsedData.actualMessage)}
 
                             <span
                               className={`text-[10px] mt-1 block text-right
@@ -372,7 +316,6 @@ export function ChatSidebar() {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Input Area */}
             <div className="p-3 border-t border-border bg-card flex flex-col gap-2">
               {productContext && (
                 <div className="flex items-center gap-2 p-2 bg-muted rounded-md border border-border relative animate-in fade-in slide-in-from-bottom-2">
@@ -405,52 +348,17 @@ export function ChatSidebar() {
                 </div>
               )}
 
-              <div className="flex gap-2 items-center">
-                <input
-                  type="file"
-                  accept="image/*,video/*"
-                  className="hidden"
-                  ref={fileInputRef}
-                  onChange={handleFileUpload}
-                />
-
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={isUploading}
-                  className="p-2 rounded-md bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer disabled:opacity-50 shrink-0"
-                  title="Attach file"
-                >
-                  {isUploading ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                  ) : (
-                    <Paperclip className="w-5 h-5" />
-                  )}
-                </button>
-
-                <input
-                  type="text"
-                  value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleSend()}
-                  placeholder={
-                    isUploading ? "Uploading file..." : "Type a message..."
-                  }
-                  disabled={isUploading}
-                  className="flex-1 px-3 py-2 rounded-md bg-background border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
-                />
-
-                <button
-                  onClick={handleSend}
-                  disabled={!inputValue.trim() || isUploading}
-                  className="p-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors cursor-pointer shrink-0"
-                >
-                  <Send className="w-4 h-4" />
-                </button>
-              </div>
+              <ChatInputBar
+                currentUserPubkey={currentUser.pubkey}
+                activeContact={activeContact}
+                inputValue={inputValue}
+                setInputValue={setInputValue}
+                onSendText={handleSend}
+                sendMessage={sendMessage}
+              />
             </div>
           </div>
         ) : (
-          /* Contacts List View */
           <div className="flex flex-col h-full">
             <div className="p-4 border-b border-border flex justify-between">
               <h2 className="font-bold text-lg flex items-center gap-2">
@@ -518,8 +426,8 @@ export function ChatSidebar() {
                           <div className="flex items-center justify-between mt-0.5">
                             <p className="text-xs text-muted-foreground truncate pr-2">
                               {contact.lastMessage?.replace(
-                                /^\[Inquiring about:\s*(.*?)\]\n\n/,
-                                "",
+                                /^\[(?:Inquiring about|Lightning Request):\s*(.*?)\]\n\n/,
+                                "[Solicitação Lightning] ",
                               ) || "No messages"}
                             </p>
                             {contact.unreadCount > 0 && (
