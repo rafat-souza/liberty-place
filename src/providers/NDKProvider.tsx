@@ -3,7 +3,6 @@ import {
   useContext,
   useEffect,
   useState,
-  useRef,
   type ReactNode,
 } from "react";
 import NDK from "@nostr-dev-kit/ndk";
@@ -27,11 +26,9 @@ const defaultRelays = [
 export const NDKProvider = ({ children }: { children: ReactNode }) => {
   const [ndk, setNdk] = useState<NDK | null>(null);
   const [isConnected, setIsConnected] = useState(false);
-  const isInitialized = useRef(false);
 
   useEffect(() => {
-    if (isInitialized.current) return;
-    isInitialized.current = true;
+    let isMounted = true;
 
     let activeRelays: string[] = [];
     const savedRelaysJSON = localStorage.getItem("app_relays");
@@ -47,17 +44,23 @@ export const NDKProvider = ({ children }: { children: ReactNode }) => {
       explicitRelayUrls: activeRelays,
     });
 
-    setNdk(ndkInstance);
+    if (isMounted) {
+      setNdk(ndkInstance);
+    }
 
     ndkInstance
       .connect(2500)
       .then(() => {
-        setIsConnected(true);
+        if (isMounted) setIsConnected(true);
       })
       .catch((error) => {
         console.error("Some relays failed, but NDK will still try:", error);
-        setIsConnected(true);
+        if (isMounted) setIsConnected(true);
       });
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   return (

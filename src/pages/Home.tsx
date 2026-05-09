@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import geohash from "ngeohash";
 import { NDKEvent, type NDKFilter } from "@nostr-dev-kit/ndk";
 import toast from "react-hot-toast";
@@ -17,7 +17,9 @@ const CATEGORIES = [
 ];
 
 export default function Home() {
-  const { ndk } = useNDK();
+  const { ndk, isConnected } = useNDK();
+  const hasFetchedRef = useRef(false);
+
   const [productSearch, setProductSearch] = useState("");
   const [region, setRegion] = useState("");
   const [isLoadingRecent, setIsLoadingRecent] = useState(true);
@@ -34,7 +36,9 @@ export default function Home() {
   });
 
   useEffect(() => {
-    if (!ndk) return;
+    if (!ndk || !isConnected || hasFetchedRef.current) return;
+
+    hasFetchedRef.current = true;
 
     const fetchRecentListings = async () => {
       setIsLoadingRecent(true);
@@ -69,10 +73,15 @@ export default function Home() {
     };
 
     fetchRecentListings();
-  }, [ndk]);
+  }, [ndk, isConnected]);
 
   const handleSearch = async () => {
-    if ((!region && !productSearch && !filters.category) || !ndk) return;
+    if (
+      (!region && !productSearch && !filters.category) ||
+      !ndk ||
+      !isConnected
+    )
+      return;
     setIsLoadingSearch(true);
     setListings([]);
     setHasSearched(true);

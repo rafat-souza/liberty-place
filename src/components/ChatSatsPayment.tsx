@@ -23,12 +23,12 @@ export function ChatSatsPayment({
     const nwcUrl = localStorage.getItem(`nwc_url_${currentUserPubkey}`);
 
     if (!nwcUrl) {
-      toast.error("Conecte sua carteira NWC na aba Wallet para poder pagar.");
+      toast.error("Connect your NWC key from your wallet at the 'Wallet' page");
       return;
     }
 
     setPayingInvoice(invoice);
-    const toastId = toast.loading("Verificando saldo...");
+    const toastId = toast.loading("Verifying balance...");
 
     try {
       const nwcClient = new NWCClient({ nostrWalletConnectUrl: nwcUrl });
@@ -36,23 +36,23 @@ export function ChatSatsPayment({
       const balanceData = await nwcClient.getBalance();
       if (balanceData && typeof balanceData.balance === "number") {
         if (balanceData.balance < amount) {
-          toast.error("Saldo insuficiente.", { id: toastId });
+          toast.error("Insufficient balance", { id: toastId });
           setPayingInvoice(null);
           return;
         }
       }
 
-      toast.loading("Processando pagamento...", { id: toastId });
+      toast.loading("Processing payment...", { id: toastId });
       const payRes = await nwcClient.payInvoice({ invoice });
 
       if (payRes && payRes.preimage) {
-        toast.success("Pagamento realizado com sucesso!", { id: toastId });
+        toast.success("Payment realized!", { id: toastId });
       } else {
         throw new Error("Payment failed");
       }
     } catch (error) {
       console.error(error);
-      toast.error("Erro ao processar o pagamento.", { id: toastId });
+      toast.error("Error processing the payment", { id: toastId });
     } finally {
       setPayingInvoice(null);
     }
@@ -84,7 +84,7 @@ export function ChatSatsPayment({
               isMine ? "text-primary-foreground" : "text-foreground"
             }`}
           >
-            Solicitação de Sats
+            Sats request
           </p>
           <p
             className={`text-xs ${
@@ -104,7 +104,7 @@ export function ChatSatsPayment({
           {payingInvoice === invoice ? (
             <Loader2 className="w-4 h-4 animate-spin" />
           ) : (
-            <>Pagar {satsAmount} sats</>
+            <>Pay {satsAmount} sats</>
           )}
         </button>
       )}

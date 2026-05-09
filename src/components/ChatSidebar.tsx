@@ -6,7 +6,7 @@ import { useChatStore } from "../store/chatStore";
 import { useChat } from "../hooks/useChat";
 import { useAuth } from "../providers/AuthProvider";
 
-import { ChatInputBar } from "./ChatInputBar";
+import { ChatInputBar } from "./ChatInvoiceInputBar";
 import { ChatSatsPayment } from "./ChatSatsPayment";
 
 export function ChatSidebar() {

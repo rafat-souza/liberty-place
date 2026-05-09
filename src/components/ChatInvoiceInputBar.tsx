@@ -29,7 +29,9 @@ export function ChatInputBar({
   const handleToggleSatsRequest = () => {
     const nwcUrl = localStorage.getItem(`nwc_url_${currentUserPubkey}`);
     if (!nwcUrl) {
-      toast.error("Conecte sua carteira NWC na aba Wallet primeiro.");
+      toast.error(
+        "Connect your wallet by inserting your NWC key at the 'Wallet' page",
+      );
       return;
     }
     setIsRequestingSats(!isRequestingSats);
@@ -48,7 +50,7 @@ export function ChatInputBar({
     }
 
     setIsGeneratingInvoice(true);
-    const toastId = toast.loading("Gerando fatura...");
+    const toastId = toast.loading("Generating invoice...");
 
     try {
       const nwcClient = new NWCClient({ nostrWalletConnectUrl: nwcUrl });
@@ -64,7 +66,7 @@ export function ChatInputBar({
         if (success) {
           setIsRequestingSats(false);
           setSatsAmount("");
-          toast.success("Solicitação enviada!", { id: toastId });
+          toast.success("Request sent!", { id: toastId });
         } else {
           toast.dismiss(toastId);
         }
@@ -74,7 +76,7 @@ export function ChatInputBar({
     } catch (error) {
       console.error(error);
       toast.error(
-        "Erro ao gerar a fatura. A sua carteira suporta criação de faturas via NWC?",
+        "Error generating invoice. Does your wallet have support for NWC?",
         { id: toastId },
       );
     } finally {
