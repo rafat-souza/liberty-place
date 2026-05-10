@@ -185,7 +185,9 @@ export function ChatSidebar() {
   return (
     <div className="fixed inset-x-0 bottom-0 z-50 pointer-events-none flex justify-end container mx-auto">
       <div
-        className={`pointer-events-auto w-[340px] h-[70vh] bg-card border border-border border-b-0 shadow-2xl rounded-t-xl flex flex-col transition-all duration-300 ease-out origin-bottom
+        className={`pointer-events-auto w-[92vw] sm:w-[400px] h-[75vh] max-h-[800px] bg-card border 
+          border-border border-b-0 shadow-2xl rounded-t-xl flex flex-col transition-all duration-300 
+          ease-out origin-bottom
           ${isOpen ? "translate-y-0" : "translate-y-full pointer-events-none"}`}
       >
         {activeContact && activeContactData ? (
@@ -199,7 +201,8 @@ export function ChatSidebar() {
               </button>
               <button
                 onClick={handleGoToProfile}
-                className="flex flex-1 items-center gap-3 min-w-0 text-left hover:opacity-80 transition-opacity cursor-pointer"
+                className="flex flex-1 items-center gap-3 min-w-0 text-left hover:opacity-80 transition-opacity
+                cursor-pointer"
               >
                 {activeContactData.profile?.image ||
                 activeContactData.profile?.picture ? (
@@ -226,7 +229,8 @@ export function ChatSidebar() {
               </button>
               <button
                 onClick={toggleOpen}
-                className="p-1 ml-2 rounded hover:bg-muted text-muted-foreground transition-colors cursor-pointer shrink-0"
+                className="p-1 ml-2 rounded hover:bg-muted text-muted-foreground transition-colors 
+                cursor-pointer shrink-0"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -375,7 +379,11 @@ export function ChatSidebar() {
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto">
+            <div
+              className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:w-1.5 
+            [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-muted-foreground/20 
+            hover:[&::-webkit-scrollbar-thumb]:bg-muted-foreground/40 [&::-webkit-scrollbar-thumb]:rounded-full"
+            >
               {contacts.length === 0 ? (
                 <div className="p-8 text-center">
                   <MessageSquare className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
