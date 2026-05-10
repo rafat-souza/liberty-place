@@ -24,36 +24,57 @@ export function ChatSatsPayment({
     "checking" | "waiting" | "paid" | "expired"
   >("checking");
 
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [timeLeft, setTimeLeft] = useState(() =>
+    Math.max(0, createdAt + 600 - Math.floor(Date.now() / 1000)),
+  );
+
+  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
-    const getSecondsRemaining = () =>
-      createdAt + 600 - Math.floor(Date.now() / 1000);
+    if (paymentStatus === "paid" || paymentStatus === "expired") return;
 
-    if (!isMine) {
-      const timeRemaining = getSecondsRemaining();
+    const updateTimer = () => {
+      const remaining = Math.max(
+        0,
+        createdAt + 600 - Math.floor(Date.now() / 1000),
+      );
+      setTimeLeft(remaining);
 
-      if (timeRemaining <= 0) {
+      if (remaining === 0) {
         setPaymentStatus("expired");
-      } else {
-        setPaymentStatus("waiting");
-        const timeout = setTimeout(() => {
-          setPaymentStatus((prev) => (prev === "paid" ? "paid" : "expired"));
-        }, timeRemaining * 1000);
-
-        return () => clearTimeout(timeout);
+        return false;
       }
+      return true;
+    };
+
+    if (!updateTimer()) return;
+
+    const timerId = setInterval(() => {
+      if (!updateTimer()) clearInterval(timerId);
+    }, 1000);
+
+    return () => clearInterval(timerId);
+  }, [createdAt, paymentStatus]);
+
+  useEffect(() => {
+    if (!isMine) {
+      setPaymentStatus((prev) =>
+        prev === "checking" && timeLeft > 0 ? "waiting" : prev,
+      );
       return;
     }
 
+    if (paymentStatus === "paid" || paymentStatus === "expired") return;
+
     const checkInvoiceStatus = async () => {
-      const isTimeExpired = getSecondsRemaining() <= 0;
+      if (Math.floor(Date.now() / 1000) >= createdAt + 600) {
+        if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+        return;
+      }
 
       const nwcUrl = localStorage.getItem(`nwc_url_${currentUserPubkey}`);
       if (!nwcUrl) {
-        setPaymentStatus(isTimeExpired ? "expired" : "waiting");
-        if (isTimeExpired && intervalRef.current)
-          clearInterval(intervalRef.current);
+        setPaymentStatus((prev) => (prev === "checking" ? "waiting" : prev));
         return;
       }
 
@@ -66,34 +87,26 @@ export function ChatSatsPayment({
           (result.preimage || result.settled_at || (result as any).settledAt)
         ) {
           setPaymentStatus("paid");
-          if (intervalRef.current) clearInterval(intervalRef.current);
+          if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
         } else {
-          setPaymentStatus(isTimeExpired ? "expired" : "waiting");
-          if (isTimeExpired && intervalRef.current)
-            clearInterval(intervalRef.current);
+          setPaymentStatus("waiting");
         }
       } catch (error) {
-        console.error("Error checking invoice status:", error);
-        setPaymentStatus(isTimeExpired ? "expired" : "waiting");
-        if (isTimeExpired && intervalRef.current)
-          clearInterval(intervalRef.current);
+        setPaymentStatus("waiting");
       }
     };
 
     checkInvoiceStatus();
-
-    intervalRef.current = setInterval(() => {
-      checkInvoiceStatus();
-    }, 10000);
+    pollIntervalRef.current = setInterval(checkInvoiceStatus, 10000);
 
     return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
+      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
     };
-  }, [isMine, invoice, currentUserPubkey, createdAt]);
+  }, [isMine, invoice, currentUserPubkey, createdAt, paymentStatus]);
 
   const handlePayInvoice = async () => {
-    if (Math.floor(Date.now() / 1000) > createdAt + 600) {
-      toast.error("Esta solicitação expirou.");
+    if (timeLeft <= 0 || paymentStatus === "expired") {
+      toast.error("This request has expired.");
       setPaymentStatus("expired");
       return;
     }
@@ -102,12 +115,12 @@ export function ChatSatsPayment({
     const nwcUrl = localStorage.getItem(`nwc_url_${currentUserPubkey}`);
 
     if (!nwcUrl) {
-      toast.error("Conecte sua carteira NWC na aba Wallet para poder pagar.");
+      toast.error("Connect your NWC wallet in the Wallet tab to pay.");
       return;
     }
 
     setPayingInvoice(invoice);
-    const toastId = toast.loading("Verificando saldo...");
+    const toastId = toast.loading("Checking balance...");
 
     try {
       const nwcClient = new NWCClient({ nostrWalletConnectUrl: nwcUrl });
@@ -115,27 +128,35 @@ export function ChatSatsPayment({
       const balanceData = await nwcClient.getBalance();
       if (balanceData && typeof balanceData.balance === "number") {
         if (balanceData.balance < amount) {
-          toast.error("Saldo insuficiente.", { id: toastId });
+          toast.error("Insufficient balance.", { id: toastId });
           setPayingInvoice(null);
           return;
         }
       }
 
-      toast.loading("Processando pagamento...", { id: toastId });
+      toast.loading("Processing payment...", { id: toastId });
       const payRes = await nwcClient.payInvoice({ invoice });
 
       if (payRes && payRes.preimage) {
-        toast.success("Pagamento realizado com sucesso!", { id: toastId });
+        toast.success("Payment successful!", { id: toastId });
         setPaymentStatus("paid");
       } else {
         throw new Error("Payment failed");
       }
     } catch (error) {
       console.error(error);
-      toast.error("Erro ao processar o pagamento.", { id: toastId });
+      toast.error("Error processing payment.", { id: toastId });
     } finally {
       setPayingInvoice(null);
     }
+  };
+
+  const formatTimeString = (seconds: number) => {
+    const m = Math.floor(seconds / 60)
+      .toString()
+      .padStart(2, "0");
+    const s = (seconds % 60).toString().padStart(2, "0");
+    return `${m}:${s}`;
   };
 
   return (
@@ -176,6 +197,7 @@ export function ChatSatsPayment({
         </div>
       </div>
 
+      {/* SENDER VIEW */}
       {isMine && (
         <div className="mt-1 pt-2 border-t border-primary-foreground/10 flex items-center justify-between">
           <div className="flex items-center gap-1.5">
@@ -195,14 +217,17 @@ export function ChatSatsPayment({
               <>
                 <XCircle className="w-3.5 h-3.5 text-red-400" />
                 <span className="text-xs font-medium text-red-400">
-                  Cancelled / Expired
+                  Expired
                 </span>
               </>
             ) : (
               <>
                 <Clock className="w-3.5 h-3.5 text-primary-foreground/70" />
                 <span className="text-xs text-primary-foreground/80">
-                  Waiting for payment
+                  Waiting...{" "}
+                  <span className="font-mono">
+                    ({formatTimeString(timeLeft)})
+                  </span>
                 </span>
               </>
             )}
@@ -210,20 +235,29 @@ export function ChatSatsPayment({
         </div>
       )}
 
+      {/* RECEIVER VIEW (Waiting) */}
       {!isMine && paymentStatus === "waiting" && (
-        <button
-          onClick={handlePayInvoice}
-          disabled={payingInvoice === invoice}
-          className="w-full bg-yellow-500 text-yellow-950 font-bold py-2 rounded-md flex items-center justify-center gap-2 hover:bg-yellow-400 transition-colors disabled:opacity-50 cursor-pointer"
-        >
-          {payingInvoice === invoice ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <>Pay {satsAmount} sats</>
-          )}
-        </button>
+        <div className="flex flex-col gap-2 mt-1">
+          <button
+            onClick={handlePayInvoice}
+            disabled={payingInvoice === invoice || timeLeft <= 0}
+            className="w-full bg-yellow-500 text-yellow-950 font-bold py-2 rounded-md flex items-center justify-center gap-2 hover:bg-yellow-400 transition-colors disabled:opacity-50 cursor-pointer"
+          >
+            {payingInvoice === invoice ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <>Pay {satsAmount} sats</>
+            )}
+          </button>
+
+          <div className="flex items-center justify-center gap-1.5 text-[10px] text-muted-foreground uppercase font-semibold tracking-wider">
+            <Clock className="w-3 h-3" />
+            <span>Expires in {formatTimeString(timeLeft)}</span>
+          </div>
+        </div>
       )}
 
+      {/* RECEIVER VIEW (Paid) */}
       {!isMine && paymentStatus === "paid" && (
         <div className="w-full bg-green-500/10 text-green-500 font-bold py-2 rounded-md flex items-center justify-center gap-2 border border-green-500/20">
           <CheckCircle2 className="w-4 h-4" />
@@ -231,6 +265,7 @@ export function ChatSatsPayment({
         </div>
       )}
 
+      {/* RECEIVER VIEW (Expired) */}
       {!isMine && paymentStatus === "expired" && (
         <div className="w-full bg-destructive/10 text-destructive font-bold py-2 rounded-md flex items-center justify-center gap-2 border border-destructive/20 opacity-80">
           <XCircle className="w-4 h-4" />
