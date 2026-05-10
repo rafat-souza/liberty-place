@@ -45,7 +45,9 @@ export function ChatInputBar({
 
     const nwcUrl = localStorage.getItem(`nwc_url_${currentUserPubkey}`);
     if (!nwcUrl) {
-      toast.error("Conecte sua carteira NWC na aba Wallet primeiro.");
+      toast.error(
+        "Connect your wallet by inserting your NWC key at the 'Wallet' page",
+      );
       return;
     }
 
@@ -102,7 +104,7 @@ export function ChatInputBar({
             ? "bg-yellow-500/20 text-yellow-500"
             : "bg-muted text-muted-foreground hover:text-foreground"
         }`}
-        title="Solicitar Sats"
+        title="Request Sats"
       >
         <Zap className="w-5 h-5" />
       </button>

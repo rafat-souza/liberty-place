@@ -100,17 +100,18 @@ export function ChatSidebar() {
     let invoice = null;
 
     const productMatch = actualMessage.match(
-      /^\[Inquiring about:\s*(.*?)\]\n\n([\s\S]*)$/,
+      /^\[Inquiring about:\s*(.*?)\]\s*([\s\S]*)$/i,
     );
     if (productMatch) {
       hasContext = true;
       contextTitle = productMatch[1];
-      actualMessage = productMatch[2];
+      actualMessage = productMatch[2].trim();
     }
 
     const lnMatch = actualMessage.match(
-      /^\[Lightning Request:\s*(\d+)\s*sats\]\n\nlightning:(lnbc[\w\d]+)$/i,
+      /\[Lightning Request:\s*(\d+)\s*sats\]\s*(?:lightning:)?(lnbc[\w\d]+)/i,
     );
+
     if (lnMatch) {
       isLightningRequest = true;
       satsAmount = lnMatch[1];
@@ -294,6 +295,7 @@ export function ChatSidebar() {
                                 satsAmount={parsedData.satsAmount!}
                                 isMine={msg.isMine}
                                 currentUserPubkey={currentUser.pubkey}
+                                createdAt={msg.createdAt}
                               />
                             )}
 
@@ -425,10 +427,15 @@ export function ChatSidebar() {
                           </div>
                           <div className="flex items-center justify-between mt-0.5">
                             <p className="text-xs text-muted-foreground truncate pr-2">
-                              {contact.lastMessage?.replace(
-                                /^\[(?:Inquiring about|Lightning Request):\s*(.*?)\]\n\n/,
-                                "[Solicitação Lightning] ",
-                              ) || "No messages"}
+                              {contact.lastMessage
+                                ?.replace(
+                                  /\[Lightning Request:\s*(\d+)\s*sats\]\s*(?:lightning:)?(lnbc[\w\d]+)/i,
+                                  "[Solicitação Lightning] ",
+                                )
+                                .replace(
+                                  /^\[Inquiring about:\s*(.*?)\]\s*/i,
+                                  "",
+                                ) || "No messages"}
                             </p>
                             {contact.unreadCount > 0 && (
                               <span className="bg-primary text-primary-foreground text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0 min-w-[18px] text-center">
