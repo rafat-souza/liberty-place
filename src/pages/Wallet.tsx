@@ -54,10 +54,10 @@ export function Wallet() {
         const response = await nwcClient.getBalance();
 
         if (response && typeof response.balance === "number") {
-          setBalance(response.balance);
+          setBalance(Math.floor(response.balance / 1000));
         }
       } catch (error) {
-        console.error("Falha ao buscar saldo via NWC:", error);
+        console.error("Failed to fetch balance via NWC:", error);
         setBalance(null);
       } finally {
         setIsFetchingBalance(false);
