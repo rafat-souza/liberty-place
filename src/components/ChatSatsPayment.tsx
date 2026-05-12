@@ -31,6 +31,15 @@ export function ChatSatsPayment({
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
+    const paidInvoices = JSON.parse(
+      localStorage.getItem("paid_invoices") || "[]",
+    );
+    if (paidInvoices.includes(invoice)) {
+      setPaymentStatus("paid");
+    }
+  }, [invoice]);
+
+  useEffect(() => {
     if (paymentStatus === "paid" || paymentStatus === "expired") return;
 
     const updateTimer = () => {
@@ -41,7 +50,12 @@ export function ChatSatsPayment({
       setTimeLeft(remaining);
 
       if (remaining === 0) {
-        setPaymentStatus("expired");
+        const paidInvoices = JSON.parse(
+          localStorage.getItem("paid_invoices") || "[]",
+        );
+        if (!paidInvoices.includes(invoice)) {
+          setPaymentStatus("expired");
+        }
         return false;
       }
       return true;
@@ -54,27 +68,28 @@ export function ChatSatsPayment({
     }, 1000);
 
     return () => clearInterval(timerId);
-  }, [createdAt, paymentStatus]);
+  }, [createdAt, paymentStatus, invoice]);
 
   useEffect(() => {
     if (!isMine) {
-      setPaymentStatus((prev) =>
-        prev === "checking" && timeLeft > 0 ? "waiting" : prev,
-      );
+      setPaymentStatus((prev) => {
+        if (prev === "paid" || prev === "expired") return prev;
+        const remaining = createdAt + 600 - Math.floor(Date.now() / 1000);
+        return remaining > 0 ? "waiting" : "expired";
+      });
       return;
     }
 
     if (paymentStatus === "paid" || paymentStatus === "expired") return;
 
     const checkInvoiceStatus = async () => {
-      if (Math.floor(Date.now() / 1000) >= createdAt + 600) {
-        if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
-        return;
-      }
+      const isTimeExpired = Math.floor(Date.now() / 1000) >= createdAt + 600;
 
       const nwcUrl = localStorage.getItem(`nwc_url_${currentUserPubkey}`);
       if (!nwcUrl) {
-        setPaymentStatus((prev) => (prev === "checking" ? "waiting" : prev));
+        setPaymentStatus(isTimeExpired ? "expired" : "waiting");
+        if (isTimeExpired && pollIntervalRef.current)
+          clearInterval(pollIntervalRef.current);
         return;
       }
 
@@ -87,12 +102,31 @@ export function ChatSatsPayment({
           (result.preimage || result.settled_at || (result as any).settledAt)
         ) {
           setPaymentStatus("paid");
+
+          const paidInvoices = JSON.parse(
+            localStorage.getItem("paid_invoices") || "[]",
+          );
+          if (!paidInvoices.includes(invoice)) {
+            localStorage.setItem(
+              "paid_invoices",
+              JSON.stringify([...paidInvoices, invoice]),
+            );
+          }
+
+          if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+        } else if (isTimeExpired) {
+          setPaymentStatus("expired");
           if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
         } else {
           setPaymentStatus("waiting");
         }
       } catch (error) {
-        setPaymentStatus("waiting");
+        if (isTimeExpired) {
+          setPaymentStatus("expired");
+          if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+        } else {
+          setPaymentStatus("waiting");
+        }
       }
     };
 
@@ -140,6 +174,16 @@ export function ChatSatsPayment({
       if (payRes && payRes.preimage) {
         toast.success("Payment successful!", { id: toastId });
         setPaymentStatus("paid");
+
+        const paidInvoices = JSON.parse(
+          localStorage.getItem("paid_invoices") || "[]",
+        );
+        if (!paidInvoices.includes(invoice)) {
+          localStorage.setItem(
+            "paid_invoices",
+            JSON.stringify([...paidInvoices, invoice]),
+          );
+        }
       } else {
         throw new Error("Payment failed");
       }
@@ -161,35 +205,35 @@ export function ChatSatsPayment({
 
   return (
     <div
-      className={`flex flex-col gap-3 p-3 mb-1 rounded-md border ${
-        isMine
-          ? "bg-primary-foreground/10 border-primary-foreground/20"
-          : "bg-yellow-500/10 border-yellow-500/20"
+      className={`flex flex-col gap-2 p-3 rounded-md mb-1 ${
+        isMine ? "bg-zinc-900" : "bg-yellow-500/20"
       }`}
     >
       <div className="flex items-center gap-3">
         <div
           className={`p-2 rounded-full ${
-            isMine ? "bg-primary-foreground/20" : "bg-yellow-500/20"
+            isMine ? "bg-zinc-800" : "bg-yellow-500/30"
           }`}
         >
           <Zap
             className={`w-5 h-5 ${
-              isMine ? "text-primary-foreground" : "text-yellow-500"
+              isMine
+                ? "text-yellow-400"
+                : "text-yellow-600 dark:text-yellow-500"
             }`}
           />
         </div>
         <div>
           <p
             className={`text-sm font-semibold ${
-              isMine ? "text-primary-foreground" : "text-foreground"
+              isMine ? "text-zinc-100" : "text-foreground"
             }`}
           >
             Sats request
           </p>
           <p
             className={`text-xs ${
-              isMine ? "text-primary-foreground/80" : "text-muted-foreground"
+              isMine ? "text-zinc-400" : "text-muted-foreground"
             }`}
           >
             {satsAmount} sats
@@ -199,14 +243,12 @@ export function ChatSatsPayment({
 
       {/* SENDER VIEW */}
       {isMine && (
-        <div className="mt-1 pt-2 border-t border-primary-foreground/10 flex items-center justify-between">
+        <div className="mt-2 pt-3 border-t border-zinc-800 flex items-center justify-between">
           <div className="flex items-center gap-1.5">
             {paymentStatus === "checking" ? (
               <>
-                <Loader2 className="w-3 h-3 animate-spin text-primary-foreground/60" />
-                <span className="text-xs text-primary-foreground/80">
-                  Checking...
-                </span>
+                <Loader2 className="w-3 h-3 animate-spin text-zinc-400" />
+                <span className="text-xs text-zinc-400">Checking...</span>
               </>
             ) : paymentStatus === "paid" ? (
               <>
@@ -222,8 +264,8 @@ export function ChatSatsPayment({
               </>
             ) : (
               <>
-                <Clock className="w-3.5 h-3.5 text-primary-foreground/70" />
-                <span className="text-xs text-primary-foreground/80">
+                <Clock className="w-3.5 h-3.5 text-zinc-400" />
+                <span className="text-xs text-zinc-400">
                   Waiting...{" "}
                   <span className="font-mono">
                     ({formatTimeString(timeLeft)})
@@ -237,11 +279,11 @@ export function ChatSatsPayment({
 
       {/* RECEIVER VIEW (Waiting) */}
       {!isMine && paymentStatus === "waiting" && (
-        <div className="flex flex-col gap-2 mt-1">
+        <div className="flex flex-col gap-2 mt-2">
           <button
             onClick={handlePayInvoice}
             disabled={payingInvoice === invoice || timeLeft <= 0}
-            className="w-full bg-yellow-500 text-yellow-950 font-bold py-2 rounded-md flex items-center justify-center gap-2 hover:bg-yellow-400 transition-colors disabled:opacity-50 cursor-pointer"
+            className="w-full bg-yellow-500 text-yellow-950 font-bold py-2.5 rounded-md flex items-center justify-center gap-2 hover:bg-yellow-400 transition-colors disabled:opacity-50 cursor-pointer shadow-sm"
           >
             {payingInvoice === invoice ? (
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -259,7 +301,7 @@ export function ChatSatsPayment({
 
       {/* RECEIVER VIEW (Paid) */}
       {!isMine && paymentStatus === "paid" && (
-        <div className="w-full bg-green-500/10 text-green-500 font-bold py-2 rounded-md flex items-center justify-center gap-2 border border-green-500/20">
+        <div className="w-full bg-green-500/20 text-green-700 dark:text-green-400 font-bold py-2.5 rounded-md flex items-center justify-center gap-2 mt-1">
           <CheckCircle2 className="w-4 h-4" />
           Paid
         </div>
@@ -267,7 +309,7 @@ export function ChatSatsPayment({
 
       {/* RECEIVER VIEW (Expired) */}
       {!isMine && paymentStatus === "expired" && (
-        <div className="w-full bg-destructive/10 text-destructive font-bold py-2 rounded-md flex items-center justify-center gap-2 border border-destructive/20 opacity-80">
+        <div className="w-full bg-destructive/20 text-destructive font-bold py-2.5 rounded-md flex items-center justify-center gap-2 mt-1 opacity-90">
           <XCircle className="w-4 h-4" />
           Expired
         </div>

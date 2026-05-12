@@ -117,7 +117,7 @@ export function ChatInputBar({
             value={satsAmount}
             onChange={(e) => setSatsAmount(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSendSatsRequest()}
-            placeholder="Quantidade em sats..."
+            placeholder="Amount in sats..."
             disabled={isGeneratingInvoice}
             className="flex-1 px-3 py-2 rounded-md bg-background border border-yellow-500/50 text-sm focus:outline-none focus:ring-1 focus:ring-yellow-500 disabled:opacity-50"
           />
