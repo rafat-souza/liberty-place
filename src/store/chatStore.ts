@@ -120,8 +120,19 @@ export const useChatStore = create<ChatState>((set) => ({
         contactUpdates.lastMessageAt = message.createdAt;
       }
 
-      if (!message.isMine && state.activeContact !== pubkey) {
-        contactUpdates.unreadCount = (currentContact?.unreadCount || 0) + 1;
+      const lastReadStr = localStorage.getItem(`chat_last_read_${pubkey}`);
+      const lastRead = lastReadStr ? parseInt(lastReadStr, 10) : 0;
+
+      if (!message.isMine) {
+        if (state.isOpen && state.activeContact === pubkey) {
+          localStorage.setItem(
+            `chat_last_read_${pubkey}`,
+            Math.floor(Date.now() / 1000).toString(),
+          );
+          contactUpdates.unreadCount = 0;
+        } else if (message.createdAt > lastRead) {
+          contactUpdates.unreadCount = (currentContact?.unreadCount || 0) + 1;
+        }
       }
 
       const updatedContacts = state.contacts.map((c) =>
@@ -131,7 +142,12 @@ export const useChatStore = create<ChatState>((set) => ({
       if (!currentContact) {
         updatedContacts.push({
           pubkey,
-          unreadCount: message.isMine ? 0 : 1,
+          unreadCount:
+            !message.isMine &&
+            !(state.isOpen && state.activeContact === pubkey) &&
+            message.createdAt > lastRead
+              ? 1
+              : 0,
           lastMessage: message.content,
           lastMessageAt: message.createdAt,
           ...contactUpdates,
@@ -144,12 +160,17 @@ export const useChatStore = create<ChatState>((set) => ({
       };
     }),
 
-  markAsRead: (pubkey) =>
+  markAsRead: (pubkey) => {
+    localStorage.setItem(
+      `chat_last_read_${pubkey}`,
+      Math.floor(Date.now() / 1000).toString(),
+    );
     set((state) => ({
       contacts: state.contacts.map((c) =>
         c.pubkey === pubkey ? { ...c, unreadCount: 0 } : c,
       ),
-    })),
+    }));
+  },
 
   clearMessages: (pubkey) =>
     set((state) => {
