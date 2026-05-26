@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Server, ChevronRight } from "lucide-react";
+import { Server, ChevronRight, UploadCloud } from "lucide-react";
 
 export function Settings() {
   return (
@@ -27,6 +27,25 @@ export function Settings() {
                 </h2>
                 <p className="text-sm text-muted-foreground">
                   Manage your connections to the Nostr network
+                </p>
+              </div>
+            </div>
+            <ChevronRight className="w-5 h-5 text-muted-foreground" />
+          </Link>
+          <Link
+            to="/settings/media"
+            className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors"
+          >
+            <div className="flex items-center gap-4">
+              <div className="p-2 bg-primary/10 rounded-lg">
+                <UploadCloud className="w-6 h-6 text-primary" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-foreground">
+                  Media Servers
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  Manage servers for image and video uploads
                 </p>
               </div>
             </div>

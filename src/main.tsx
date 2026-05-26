@@ -14,6 +14,7 @@ import { About } from "./pages/About.tsx";
 import { Settings } from "./pages/Settings.tsx";
 import { RelaySettings } from "./pages/RelaySettings.tsx";
 import { Wallet } from "./pages/Wallet.tsx";
+import { MediaSettings } from "./pages/MediaSettings.tsx";
 
 import "./index.css";
 
@@ -53,6 +54,10 @@ const router = createBrowserRouter([
       {
         path: "/settings/relays",
         element: <RelaySettings />,
+      },
+      {
+        path: "/settings/media",
+        element: <MediaSettings />,
       },
       {
         path: "/wallet",
