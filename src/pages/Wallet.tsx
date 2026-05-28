@@ -174,7 +174,8 @@ export function Wallet() {
               </div>
               <button
                 onClick={handleDisconnect}
-                className="flex items-center gap-2 px-4 py-2 bg-destructive/10 text-destructive hover:bg-destructive hover:text-destructive-foreground rounded-md transition-colors font-medium cursor-pointer"
+                className="flex items-center gap-2 px-4 py-2 bg-destructive/10 hover:bg-destructive hover:text-destructive-foreground
+                rounded-md transition-colors font-medium cursor-pointer"
               >
                 <Unplug className="w-4 h-4" />
                 Disconnect
@@ -225,12 +226,14 @@ export function Wallet() {
                 value={nwcUrl}
                 onChange={(e) => setNwcUrl(e.target.value)}
                 placeholder="nostr+walletconnect://..."
-                className="w-full px-4 py-3 rounded-md bg-background border border-input text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                className="w-full px-4 py-3 rounded-md bg-background border border-input text-sm focus:outline-none focus:ring-2 
+                focus:ring-primary"
               />
               <button
                 type="submit"
                 disabled={!nwcUrl.trim()}
-                className="w-full bg-primary text-primary-foreground px-4 py-3 rounded-md font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full bg-primary text-primary-foreground px-4 py-3 rounded-md font-medium hover:bg-primary/90 
+                transition-colors disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
               >
                 Connect Wallet
               </button>
