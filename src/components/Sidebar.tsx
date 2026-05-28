@@ -1,13 +1,5 @@
 import { NavLink } from "react-router-dom";
-import {
-  Home,
-  Wallet,
-  Info,
-  ChevronLeft,
-  ChevronRight,
-  Menu,
-  Settings,
-} from "lucide-react";
+import { Home, Wallet, Info, ChevronLeft, Menu, Settings } from "lucide-react";
 
 interface SidebarProps {
   isExpanded: boolean;
