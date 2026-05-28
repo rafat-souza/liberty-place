@@ -18,59 +18,54 @@ import { MediaSettings } from "./pages/MediaSettings.tsx";
 
 import "./index.css";
 
-const router = createHashRouter(
-  [
-    {
-      path: "/",
-      element: <App />,
-      children: [
-        {
-          path: "/",
-          element: <Home />,
-        },
-        {
-          path: "/new",
-          element: <NewListing />,
-        },
-        {
-          path: "/profile",
-          element: <Profile />,
-        },
-        {
-          path: "/listing/:id",
-          element: <ListingDetail />,
-        },
-        {
-          path: "/seller/:pubkey",
-          element: <SellerProfile />,
-        },
-        {
-          path: "/about",
-          element: <About />,
-        },
-        {
-          path: "/settings",
-          element: <Settings />,
-        },
-        {
-          path: "/settings/relays",
-          element: <RelaySettings />,
-        },
-        {
-          path: "/settings/media",
-          element: <MediaSettings />,
-        },
-        {
-          path: "/wallet",
-          element: <Wallet />,
-        },
-      ],
-    },
-  ],
+const router = createHashRouter([
   {
-    basename: "/liberty-place",
+    path: "/",
+    element: <App />,
+    children: [
+      {
+        path: "/",
+        element: <Home />,
+      },
+      {
+        path: "/new",
+        element: <NewListing />,
+      },
+      {
+        path: "/profile",
+        element: <Profile />,
+      },
+      {
+        path: "/listing/:id",
+        element: <ListingDetail />,
+      },
+      {
+        path: "/seller/:pubkey",
+        element: <SellerProfile />,
+      },
+      {
+        path: "/about",
+        element: <About />,
+      },
+      {
+        path: "/settings",
+        element: <Settings />,
+      },
+      {
+        path: "/settings/relays",
+        element: <RelaySettings />,
+      },
+      {
+        path: "/settings/media",
+        element: <MediaSettings />,
+      },
+      {
+        path: "/wallet",
+        element: <Wallet />,
+      },
+    ],
   },
-);
+]);
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
