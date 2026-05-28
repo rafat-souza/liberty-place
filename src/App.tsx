@@ -8,6 +8,7 @@ import { useNDK } from "./providers/NDKProvider";
 import { useChatStore } from "./store/chatStore";
 import { useAuth } from "./providers/AuthProvider";
 import { Sidebar } from "./components/Sidebar";
+import LibertyPlaceLogo from "./assets/LibertyPlaceLogo.png";
 
 export default function App() {
   const { isConnected } = useNDK();
@@ -40,12 +41,12 @@ export default function App() {
     <div className="h-screen flex flex-col bg-background text-foreground overflow-hidden">
       <header className="shrink-0 border-b bg-card p-4 shadow-sm z-50">
         <div className="container flex justify-between mx-auto">
-          <NavLink
-            to="/"
-            className="text-2xl font-bold flex items-center"
-            reloadDocument
-          >
-            Liberty Place
+          <NavLink to="/" className="flex items-center" reloadDocument>
+            <img
+              src={LibertyPlaceLogo}
+              alt="Liberty Place Logo"
+              className="h-6 md:h-10 w-auto hover:opacity-80 transition-opacity"
+            />
           </NavLink>
           <div className="flex items-center gap-8">
             <button
@@ -99,7 +100,7 @@ export default function App() {
             [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-muted-foreground/20 
             hover:[&::-webkit-scrollbar-thumb]:bg-muted-foreground/40 [&::-webkit-scrollbar-thumb]:rounded-full"
         >
-          <div className="container mx-auto ">
+          <div className="container mx-auto">
             <Outlet />
           </div>
         </main>
