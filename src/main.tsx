@@ -15,6 +15,7 @@ import { Settings } from "./pages/Settings.tsx";
 import { RelaySettings } from "./pages/RelaySettings.tsx";
 import { Wallet } from "./pages/Wallet.tsx";
 import { MediaSettings } from "./pages/MediaSettings.tsx";
+import { ThemeProvider } from "./providers/ThemeProvider.tsx";
 
 import "./index.css";
 
@@ -69,10 +70,12 @@ const router = createHashRouter([
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <NDKProvider>
-      <AuthProvider>
-        <RouterProvider router={router} />
-      </AuthProvider>
-    </NDKProvider>
+    <ThemeProvider defaultTheme="dark" storageKey="app-theme">
+      <NDKProvider>
+        <AuthProvider>
+          <RouterProvider router={router} />
+        </AuthProvider>
+      </NDKProvider>
+    </ThemeProvider>
   </StrictMode>,
 );
