@@ -1,6 +1,6 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import { createHashRouter, RouterProvider } from "react-router-dom";
 
 import Home from "./pages/Home.tsx";
 import { NewListing } from "./pages/NewListing.tsx";
@@ -18,7 +18,7 @@ import { MediaSettings } from "./pages/MediaSettings.tsx";
 
 import "./index.css";
 
-const router = createBrowserRouter(
+const router = createHashRouter(
   [
     {
       path: "/",
