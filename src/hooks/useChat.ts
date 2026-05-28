@@ -1,5 +1,5 @@
 import { useEffect, useCallback, useRef } from "react";
-import NDK, { NDKEvent, type NDKFilter } from "@nostr-dev-kit/ndk";
+import NDK, { NDKEvent, type NDKFilter, NDKRelaySet } from "@nostr-dev-kit/ndk";
 import { useNDK } from "../providers/NDKProvider";
 import { useAuth } from "../providers/AuthProvider";
 import { useChatStore } from "../store/chatStore";
@@ -150,13 +150,41 @@ export function useChat() {
 
       try {
         const recipient = ndk.getUser({ pubkey });
+
+        const relayListEvent = await ndk.fetchEvent({
+          kinds: [10002],
+          authors: [pubkey],
+        });
+
+        const recipientReadRelays: string[] = [];
+
+        if (relayListEvent) {
+          relayListEvent.tags.forEach((tag: string[]) => {
+            if (tag[0] === "r" && tag[1]) {
+              if (!tag[2] || tag[2] === "read") {
+                recipientReadRelays.push(tag[1]);
+              }
+            }
+          });
+        }
+
+        const targetRelayUrls = new Set<string>();
+        ndk.pool.relays.forEach((r) => targetRelayUrls.add(r.url));
+        recipientReadRelays.forEach((url: string) => targetRelayUrls.add(url));
+
+        const relaySet = NDKRelaySet.fromRelayUrls(
+          Array.from(targetRelayUrls),
+          ndk,
+        );
+
         const event = new NDKEvent(ndk);
         event.kind = DM_KIND;
         event.content = content;
         event.tags = [["p", pubkey]];
 
         await event.encrypt(recipient, undefined, "nip04");
-        await event.publish();
+
+        await event.publish(relaySet);
 
         addMessage(pubkey, {
           id: event.id,
