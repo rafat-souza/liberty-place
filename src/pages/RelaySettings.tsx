@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import { Server, Plus, Trash2, ChevronLeft } from "lucide-react";
-import { NDKEvent, type NDKRelay } from "@nostr-dev-kit/ndk";
+import { NDKEvent } from "@nostr-dev-kit/ndk";
 
 import { useNDK } from "../providers/NDKProvider";
 import { useAuth } from "../providers/AuthProvider";
