@@ -45,7 +45,7 @@ export default function App() {
             className="text-2xl font-bold flex items-center"
             reloadDocument
           >
-            Nostr Marketplace
+            Liberty Place
           </NavLink>
           <div className="flex items-center gap-8">
             <button

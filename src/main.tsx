@@ -18,54 +18,59 @@ import { MediaSettings } from "./pages/MediaSettings.tsx";
 
 import "./index.css";
 
-const router = createBrowserRouter([
+const router = createBrowserRouter(
+  [
+    {
+      path: "/",
+      element: <App />,
+      children: [
+        {
+          path: "/",
+          element: <Home />,
+        },
+        {
+          path: "/new",
+          element: <NewListing />,
+        },
+        {
+          path: "/profile",
+          element: <Profile />,
+        },
+        {
+          path: "/listing/:id",
+          element: <ListingDetail />,
+        },
+        {
+          path: "/seller/:pubkey",
+          element: <SellerProfile />,
+        },
+        {
+          path: "/about",
+          element: <About />,
+        },
+        {
+          path: "/settings",
+          element: <Settings />,
+        },
+        {
+          path: "/settings/relays",
+          element: <RelaySettings />,
+        },
+        {
+          path: "/settings/media",
+          element: <MediaSettings />,
+        },
+        {
+          path: "/wallet",
+          element: <Wallet />,
+        },
+      ],
+    },
+  ],
   {
-    path: "/",
-    element: <App />,
-    children: [
-      {
-        path: "/",
-        element: <Home />,
-      },
-      {
-        path: "/new",
-        element: <NewListing />,
-      },
-      {
-        path: "/profile",
-        element: <Profile />,
-      },
-      {
-        path: "/listing/:id",
-        element: <ListingDetail />,
-      },
-      {
-        path: "/seller/:pubkey",
-        element: <SellerProfile />,
-      },
-      {
-        path: "/about",
-        element: <About />,
-      },
-      {
-        path: "/settings",
-        element: <Settings />,
-      },
-      {
-        path: "/settings/relays",
-        element: <RelaySettings />,
-      },
-      {
-        path: "/settings/media",
-        element: <MediaSettings />,
-      },
-      {
-        path: "/wallet",
-        element: <Wallet />,
-      },
-    ],
+    basename: "/liberty-place",
   },
-]);
+);
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

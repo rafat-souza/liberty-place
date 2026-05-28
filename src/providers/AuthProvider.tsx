@@ -96,7 +96,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
       }
 
-      console.log("Nenhum 10002 encontrado, tentando puxar da extensão...");
+      console.log("No 10002 found, trying to pull from extension...");
       await syncExtensionRelays();
     } catch (error) {
       console.error("Erro ao buscar Kind 10002:", error);
