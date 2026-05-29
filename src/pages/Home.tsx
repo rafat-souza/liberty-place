@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import geohash from "ngeohash";
 import { NDKEvent, type NDKFilter } from "@nostr-dev-kit/ndk";
 import toast from "react-hot-toast";
+import { X } from "lucide-react";
 
 import { useNDK } from "../providers/NDKProvider";
 import { ListingCard } from "../components/ListingCard";
@@ -19,14 +21,10 @@ const CATEGORIES = [
 export default function Home() {
   const { ndk, isConnected } = useNDK();
   const hasFetchedRef = useRef(false);
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [productSearch, setProductSearch] = useState("");
   const [region, setRegion] = useState("");
-  const [isLoadingRecent, setIsLoadingRecent] = useState(true);
-  const [recentListings, setRecentListings] = useState<NDKEvent[]>([]);
-  const [isLoadingSearch, setIsLoadingSearch] = useState(false);
-  const [listings, setListings] = useState<NDKEvent[]>([]);
-  const [hasSearched, setHasSearched] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState({
     category: "",
@@ -34,6 +32,164 @@ export default function Home() {
     minPrice: "",
     maxPrice: "",
   });
+
+  const [isLoadingRecent, setIsLoadingRecent] = useState(true);
+  const [recentListings, setRecentListings] = useState<NDKEvent[]>([]);
+  const [isLoadingSearch, setIsLoadingSearch] = useState(false);
+  const [listings, setListings] = useState<NDKEvent[]>([]);
+  const [hasSearched, setHasSearched] = useState(false);
+
+  useEffect(() => {
+    const q = searchParams.get("q") || "";
+    const loc = searchParams.get("region") || "";
+    const cat = searchParams.get("category") || "";
+    const minP = searchParams.get("minPrice") || "";
+    const maxP = searchParams.get("maxPrice") || "";
+    const curr = searchParams.get("currency") || "";
+
+    setProductSearch(q);
+    setRegion(loc);
+    setFilters({
+      category: cat,
+      currency: curr,
+      minPrice: minP,
+      maxPrice: maxP,
+    });
+
+    if (!q && !loc && !cat && !minP && !maxP && !curr) {
+      setHasSearched(false);
+      setListings([]);
+      return;
+    }
+
+    if (!ndk || !isConnected) return;
+
+    const executeSearch = async () => {
+      setIsLoadingSearch(true);
+      setListings([]);
+      setHasSearched(true);
+
+      try {
+        const filter: NDKFilter = {
+          kinds: [30402],
+          limit: 500,
+        };
+
+        if (cat) {
+          filter["#t"] = [
+            cat
+              .normalize("NFD")
+              .replace(/[\u0300-\u036f]/g, "")
+              .toLowerCase(),
+          ];
+        }
+
+        if (loc) {
+          const geoResponse = await fetch(
+            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(loc)}&email=${import.meta.env.VITE_NOMINATIM_EMAIL}`,
+            { headers: { Accept: "application/json" } },
+          );
+          const geoData = await geoResponse.json();
+
+          if (!geoData || geoData.length === 0) {
+            toast.error("Region not found");
+            setIsLoadingSearch(false);
+            return;
+          }
+
+          const { lat, lon } = geoData[0];
+          const baseHash = geohash.encode(parseFloat(lat), parseFloat(lon), 8);
+          const hashPrecisions = [4, 5, 6, 7, 8].map((len) =>
+            baseHash.substring(0, len),
+          );
+          const neighbors = geohash.neighbors(baseHash.substring(0, 4));
+          const finalHashes = Array.from(
+            new Set([...hashPrecisions, ...neighbors]),
+          );
+
+          filter["#g"] = finalHashes;
+        }
+
+        const fetchPromise = ndk.fetchEvents(filter);
+        const timeoutPromise = new Promise<Set<NDKEvent>>((resolve) =>
+          setTimeout(() => resolve(new Set()), 4000),
+        );
+
+        const events = await Promise.race([fetchPromise, timeoutPromise]);
+        let fetchedListings = Array.from(events).filter((event) =>
+          event.tags.some((t) => t[0] === "g"),
+        );
+
+        if (q) {
+          const normalizeStr = (str: string) =>
+            str
+              .normalize("NFD")
+              .replace(/[\u0300-\u036f]/g, "")
+              .toLowerCase()
+              .trim();
+
+          const searchNormalized = normalizeStr(q);
+
+          fetchedListings = fetchedListings.filter((event) => {
+            const title = event.tags.find((t) => t[0] === "title")?.[1] || "";
+            const content = event.content || "";
+
+            return (
+              normalizeStr(title).includes(searchNormalized) ||
+              normalizeStr(content).includes(searchNormalized)
+            );
+          });
+
+          fetchedListings.sort((a, b) => {
+            const titleA = normalizeStr(
+              a.tags.find((t) => t[0] === "title")?.[1] || "",
+            );
+            const titleB = normalizeStr(
+              b.tags.find((t) => t[0] === "title")?.[1] || "",
+            );
+
+            const aHasTitleMatch = titleA.includes(searchNormalized);
+            const bHasTitleMatch = titleB.includes(searchNormalized);
+
+            if (aHasTitleMatch && !bHasTitleMatch) return -1;
+            if (!aHasTitleMatch && bHasTitleMatch) return 1;
+
+            return (b.created_at || 0) - (a.created_at || 0);
+          });
+        } else {
+          fetchedListings.sort(
+            (a, b) => (b.created_at || 0) - (a.created_at || 0),
+          );
+        }
+
+        if (minP || maxP || curr) {
+          fetchedListings = fetchedListings.filter((event) => {
+            const priceTag = event.tags.find((t) => t[0] === "price");
+            if (!priceTag || !priceTag[1]) return false;
+
+            if (curr && priceTag[2] !== curr) return false;
+
+            const itemPrice = parseFloat(priceTag[1]);
+            if (isNaN(itemPrice)) return false;
+
+            const min = minP ? parseFloat(minP) : 0;
+            const max = maxP ? parseFloat(maxP) : Infinity;
+
+            return itemPrice >= min && itemPrice <= max;
+          });
+        }
+
+        setListings(fetchedListings);
+      } catch (error) {
+        console.error("Failed on searching for listings: ", error);
+        toast.error("Error performing search");
+      } finally {
+        setIsLoadingSearch(false);
+      }
+    };
+
+    executeSearch();
+  }, [searchParams, ndk, isConnected]);
 
   useEffect(() => {
     if (!ndk || !isConnected || hasFetchedRef.current) return;
@@ -55,8 +211,7 @@ export default function Home() {
 
         const events = await Promise.race([fetchPromise, timeoutPromise]);
 
-        let fetchedListings = Array.from(events);
-        fetchedListings = fetchedListings.filter((event) =>
+        let fetchedListings = Array.from(events).filter((event) =>
           event.tags.some((t) => t[0] === "g"),
         );
 
@@ -75,149 +230,29 @@ export default function Home() {
     fetchRecentListings();
   }, [ndk, isConnected]);
 
-  const handleSearch = async () => {
-    if (
-      (!region && !productSearch && !filters.category) ||
-      !ndk ||
-      !isConnected
-    )
-      return;
-    setIsLoadingSearch(true);
-    setListings([]);
-    setHasSearched(true);
+  const handleSearch = () => {
+    const params: Record<string, string> = {};
 
-    try {
-      const filter: NDKFilter = {
-        kinds: [30402],
-        limit: 500,
-      };
+    if (productSearch) params.q = productSearch;
+    if (region) params.region = region;
+    if (filters.category) params.category = filters.category;
+    if (filters.minPrice) params.minPrice = filters.minPrice;
+    if (filters.maxPrice) params.maxPrice = filters.maxPrice;
+    if (filters.currency) params.currency = filters.currency;
 
-      if (filters.category) {
-        filter["#t"] = [
-          filters.category
-            .normalize("NFD")
-            .replace(/[\u0300-\u036f]/g, "")
-            .toLowerCase(),
-        ];
-      }
+    setSearchParams(params);
+  };
 
-      if (region) {
-        const geoResponse = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(region)}&email=${import.meta.env.VITE_NOMINATIM_EMAIL}`,
-          {
-            headers: { Accept: "application/json" },
-          },
-        );
-        const geoData = await geoResponse.json();
-
-        if (!geoData || geoData.length === 0) {
-          toast.error("Region not found");
-          setIsLoadingSearch(false);
-          return;
-        }
-
-        const { lat, lon } = geoData[0];
-        const parsedLat = parseFloat(lat);
-        const parsedLon = parseFloat(lon);
-
-        const baseHash = geohash.encode(parsedLat, parsedLon, 8);
-
-        const hashPrecisions = [4, 5, 6, 7, 8].map((len) =>
-          baseHash.substring(0, len),
-        );
-
-        const level4Hash = baseHash.substring(0, 4);
-        const neighbors = geohash.neighbors(level4Hash);
-
-        const finalHashes = Array.from(
-          new Set([...hashPrecisions, ...neighbors]),
-        );
-
-        filter["#g"] = finalHashes;
-      }
-
-      const fetchPromise = ndk.fetchEvents(filter);
-      const timeoutPromise = new Promise<Set<NDKEvent>>((resolve) =>
-        setTimeout(() => resolve(new Set()), 4000),
-      );
-
-      const events = await Promise.race([fetchPromise, timeoutPromise]);
-      let fetchedListings = Array.from(events);
-
-      fetchedListings = fetchedListings.filter((event) =>
-        event.tags.some((t) => t[0] === "g"),
-      );
-
-      if (productSearch) {
-        const normalizeStr = (str: string) =>
-          str
-            .normalize("NFD")
-            .replace(/[\u0300-\u036f]/g, "")
-            .toLowerCase()
-            .trim();
-
-        const searchNormalized = normalizeStr(productSearch);
-
-        fetchedListings = fetchedListings.filter((event) => {
-          const title = event.tags.find((t) => t[0] === "title")?.[1] || "";
-          const content = event.content || "";
-
-          return (
-            normalizeStr(title).includes(searchNormalized) ||
-            normalizeStr(content).includes(searchNormalized)
-          );
-        });
-
-        fetchedListings.sort((a, b) => {
-          const titleA = normalizeStr(
-            a.tags.find((t) => t[0] === "title")?.[1] || "",
-          );
-          const titleB = normalizeStr(
-            b.tags.find((t) => t[0] === "title")?.[1] || "",
-          );
-
-          const aHasTitleMatch = titleA.includes(searchNormalized);
-          const bHasTitleMatch = titleB.includes(searchNormalized);
-
-          if (aHasTitleMatch && !bHasTitleMatch) return -1;
-          if (!aHasTitleMatch && bHasTitleMatch) return 1;
-
-          return (b.created_at || 0) - (a.created_at || 0);
-        });
-      } else {
-        fetchedListings.sort(
-          (a, b) => (b.created_at || 0) - (a.created_at || 0),
-        );
-      }
-
-      if (filters.minPrice || filters.maxPrice || filters.currency) {
-        fetchedListings = fetchedListings.filter((event) => {
-          const priceTag = event.tags.find((t) => t[0] === "price");
-          if (!priceTag || !priceTag[1]) return false;
-
-          if (filters.currency && priceTag[2] !== filters.currency) {
-            return false;
-          }
-
-          const itemPrice = parseFloat(priceTag[1]);
-          if (isNaN(itemPrice)) return false;
-
-          const min = filters.minPrice ? parseFloat(filters.minPrice) : 0;
-          const max = filters.maxPrice
-            ? parseFloat(filters.maxPrice)
-            : Infinity;
-
-          return itemPrice >= min && itemPrice <= max;
-        });
-      }
-
-      setListings(fetchedListings);
-    } catch (error) {
-      console.error("Failed on searching for listings: ", error);
-      toast.error("Error performing search");
-    } finally {
-      setIsLoadingSearch(false);
-    }
+  const clearSearch = () => {
+    setProductSearch("");
+    setRegion("");
+    setFilters({
+      category: "",
+      currency: "",
+      minPrice: "",
+      maxPrice: "",
+    });
+    setSearchParams({});
   };
 
   return (
@@ -228,22 +263,43 @@ export default function Home() {
         </h2>
 
         <div className="flex flex-col md:flex-row gap-3">
-          <input
-            type="text"
-            value={productSearch}
-            onChange={(e) => setProductSearch(e.target.value)}
-            placeholder="Search for a product (e.g. smartphone, bicycle...)"
-            className="flex-[2] p-2 rounded bg-background border border-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-            onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-          />
-          <input
-            type="text"
-            value={region}
-            onChange={(e) => setRegion(e.target.value)}
-            placeholder="City or neighborhood..."
-            className="flex-[1] p-2 rounded bg-background border border-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-            onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-          />
+          <div className="relative flex-[2] flex items-center">
+            <input
+              type="text"
+              value={productSearch}
+              onChange={(e) => setProductSearch(e.target.value)}
+              placeholder="Search for a product (e.g. smartphone, bicycle...)"
+              className="w-full p-2 pr-10 rounded bg-background border border-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+            />
+            {productSearch && (
+              <button
+                onClick={() => setProductSearch("")}
+                className="absolute right-3 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            )}
+          </div>
+
+          <div className="relative flex-[1] flex items-center">
+            <input
+              type="text"
+              value={region}
+              onChange={(e) => setRegion(e.target.value)}
+              placeholder="City or neighborhood..."
+              className="w-full p-2 pr-10 rounded bg-background border border-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+            />
+            {region && (
+              <button
+                onClick={() => setRegion("")}
+                className="absolute right-3 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            )}
+          </div>
 
           <div className="flex gap-2">
             <button
@@ -269,6 +325,7 @@ export default function Home() {
                 />
               </svg>
             </button>
+
             <button
               onClick={handleSearch}
               disabled={
@@ -279,6 +336,16 @@ export default function Home() {
             >
               {isLoadingSearch ? "Searching..." : "Search"}
             </button>
+
+            {hasSearched && (
+              <button
+                onClick={clearSearch}
+                className="rounded px-4 py-2 border border-input bg-background text-foreground hover:bg-accent transition-colors cursor-pointer whitespace-nowrap font-medium"
+                title="Clear filters and return"
+              >
+                Clear
+              </button>
+            )}
           </div>
         </div>
 
