@@ -36,11 +36,11 @@ export function ListingCard({ event }: ListingCardProps) {
   const sellerPicture = profile?.image || profile?.picture;
 
   return (
-    <Link
-      to={`/listing/${event.id}`}
-      className="flex flex-col overflow-hidden rounded-xl border border-border bg-card shadow-sm hover:shadow-md transition-shadow"
-    >
-      <div className="w-full aspect-square bg-muted/10 border-b border-border overflow-hidden relative">
+    <div className="flex flex-col overflow-hidden rounded-xl border border-border bg-card shadow-sm hover:shadow-md transition-shadow">
+      <Link
+        to={`/listing/${event.id}`}
+        className="block w-full aspect-square bg-muted/10 border-b border-border overflow-hidden relative group cursor-pointer"
+      >
         {imageUrl ? (
           <img
             src={imageUrl}
@@ -48,7 +48,7 @@ export function ListingCard({ event }: ListingCardProps) {
             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center text-muted-foreground/40">
+          <div className="flex h-full w-full items-center justify-center text-muted-foreground/40 transition-transform duration-300 group-hover:scale-105">
             <svg
               className="w-12 h-12"
               fill="none"
@@ -65,12 +65,14 @@ export function ListingCard({ event }: ListingCardProps) {
             </svg>
           </div>
         )}
-      </div>
+      </Link>
 
       <div className="p-4 space-y-3">
         <div>
           <h4 className="font-bold text-lg truncate" title={title}>
-            {title}
+            <Link to={`/listing/${event.id}`} className="hover:underline">
+              {title}
+            </Link>
           </h4>
           <p className="text-xl font-black text-primary">
             {price} {currency}
@@ -102,29 +104,31 @@ export function ListingCard({ event }: ListingCardProps) {
         </div>
 
         <div className="pt-3 border-t border-border flex items-center gap-3">
-          {sellerPicture ? (
-            <img
-              src={sellerPicture}
-              alt={sellerName}
-              className="w-9 h-9 rounded-full object-cover border border-border shadow-sm"
-            />
-          ) : (
-            <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20">
-              <span className="text-xs font-bold text-primary">
-                {sellerName.substring(0, 2).toUpperCase()}
+          <Link to={`/seller/${event.pubkey}`} className="flex ml">
+            {sellerPicture ? (
+              <img
+                src={sellerPicture}
+                alt={sellerName}
+                className="w-9 h-9 rounded-full object-cover border border-border shadow-sm"
+              />
+            ) : (
+              <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20">
+                <span className="text-xs font-bold text-primary">
+                  {sellerName.substring(0, 2).toUpperCase()}
+                </span>
+              </div>
+            )}
+            <div className="flex flex-col min-w-0 ml-3">
+              <span className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+                Seller
+              </span>
+              <span className="text-sm font-bold truncate text-foreground">
+                {sellerName}
               </span>
             </div>
-          )}
-          <div className="flex flex-col min-w-0">
-            <span className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
-              Seller
-            </span>
-            <span className="text-sm font-bold truncate text-foreground">
-              {sellerName}
-            </span>
-          </div>
+          </Link>
         </div>
       </div>
-    </Link>
+    </div>
   );
 }
