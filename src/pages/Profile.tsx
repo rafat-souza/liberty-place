@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { NDKEvent, type NDKUserProfile } from "@nostr-dev-kit/ndk";
 import toast from "react-hot-toast";
-import { Pencil, Check, X, Zap } from "lucide-react";
+import { Pencil, Check, X, Zap, BadgeCheck } from "lucide-react";
 
 import { useNDK } from "../providers/NDKProvider";
 import { useAuth } from "../providers/AuthProvider";
@@ -24,6 +24,7 @@ export function Profile() {
   const [editName, setEditName] = useState("");
   const [editBio, setEditBio] = useState("");
   const [editLud16, setEditLud16] = useState("");
+  const [editNip05, setEditNip05] = useState("");
 
   useEffect(() => {
     if (!ndk || !currentUser) return;
@@ -36,6 +37,7 @@ export function Profile() {
           setEditName(userProfile.name || userProfile.displayName || "");
           setEditBio(userProfile.about || "");
           setEditLud16(userProfile.lud16 || "");
+          setEditNip05(userProfile.nip05 || "");
         }
 
         const userListings = await ndk
@@ -105,6 +107,7 @@ export function Profile() {
     setEditName(profile?.name || profile?.displayName || "");
     setEditBio(profile?.about || "");
     setEditLud16(profile?.lud16 || "");
+    setEditNip05(profile?.nip05 || "");
     setIsEditing(true);
   };
 
@@ -121,6 +124,7 @@ export function Profile() {
         displayName: editName.trim(),
         about: editBio.trim(),
         lud16: editLud16.trim(),
+        nip05: editNip05.trim(),
       };
 
       const event = new NDKEvent(ndk);
@@ -230,6 +234,20 @@ export function Profile() {
               </div>
               <div>
                 <label className="text-xs font-semibold text-muted-foreground uppercase mb-1 block">
+                  NIP-05 Address
+                </label>
+                <input
+                  type="text"
+                  value={editNip05}
+                  onChange={(e) => setEditNip05(e.target.value)}
+                  disabled={isSaving}
+                  className="w-full px-3 py-2 rounded-md bg-background border border-input text-sm focus:outline-none focus:ring-2 
+                  focus:ring-primary disabled:opacity-50"
+                  placeholder="name@domain.com"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase mb-1 block">
                   Lightning Address (LUD-16)
                 </label>
                 <input
@@ -260,6 +278,16 @@ export function Profile() {
           ) : (
             <div className="pr-10">
               <h2 className="text-2xl font-bold text-foreground">{name}</h2>
+
+              {profile?.nip05 && (
+                <p
+                  className="flex items-center justify-center md:justify-start gap-1.5 text-sm text-gray-600 dark:text-gray-500 
+                mt-1 font-medium"
+                >
+                  <BadgeCheck className="w-4 h-4" />
+                  {profile.nip05}
+                </p>
+              )}
 
               {profile?.lud16 && (
                 <p className="flex items-center justify-center md:justify-start gap-1.5 text-sm text-yellow-500 mt-1 font-medium">

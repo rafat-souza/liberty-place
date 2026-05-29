@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { NDKEvent, type NDKUserProfile, NDKUser } from "@nostr-dev-kit/ndk";
-import { Zap } from "lucide-react";
+import { Zap, BadgeCheck } from "lucide-react";
 
 import { useNDK } from "../providers/NDKProvider";
 import { ListingCard } from "../components/ListingCard";
@@ -77,7 +77,10 @@ export function SellerProfile() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-8">
-      <section className="bg-card p-6 rounded-xl border border-border shadow-sm flex flex-col md:flex-row items-center md:items-start gap-6">
+      <section
+        className="bg-card p-6 rounded-xl border border-border shadow-sm flex flex-col md:flex-row items-center 
+      md:items-start gap-6"
+      >
         {avatar ? (
           <img
             src={avatar}
@@ -85,7 +88,10 @@ export function SellerProfile() {
             className="w-32 h-32 rounded-full object-cover border-4 border-background shadow-md shrink-0"
           />
         ) : (
-          <div className="w-32 h-32 rounded-full bg-primary/10 flex items-center justify-center border-4 border-background shadow-md shrink-0">
+          <div
+            className="w-32 h-32 rounded-full bg-primary/10 flex items-center justify-center border-4 border-background 
+          shadow-md shrink-0"
+          >
             <span className="text-4xl font-bold text-primary">
               {name.substring(0, 2).toUpperCase()}
             </span>
@@ -94,6 +100,16 @@ export function SellerProfile() {
 
         <div className="flex-1 text-center md:text-left">
           <h2 className="text-2xl font-bold text-foreground">{name}</h2>
+
+          {profile?.nip05 && (
+            <p
+              className="flex items-center justify-center md:justify-start gap-1.5 text-sm text-gray-600 dark:text-gray-500 
+            mt-1 font-medium"
+            >
+              <BadgeCheck className="w-4 h-4" />
+              {profile.nip05}
+            </p>
+          )}
 
           {profile?.lud16 && (
             <p className="flex items-center justify-center md:justify-start gap-1.5 text-sm text-yellow-500 mt-1 font-medium">
@@ -127,7 +143,6 @@ export function SellerProfile() {
         </div>
       </section>
 
-      {/* Seller listings */}
       <section>
         <h3 className="text-xl font-bold mb-4 border-b border-border pb-2">
           Listings from {name}
