@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { NDKEvent, type NDKUserProfile, NDKUser } from "@nostr-dev-kit/ndk";
-import { Zap, BadgeCheck } from "lucide-react";
+import { Zap, BadgeCheck, Share2, Copy, X } from "lucide-react";
+import toast from "react-hot-toast";
+import { QRCodeSVG } from "qrcode.react";
 
 import { useNDK } from "../providers/NDKProvider";
 import { ListingCard } from "../components/ListingCard";
@@ -15,6 +17,9 @@ export function SellerProfile() {
   const [followersCount, setFollowersCount] = useState<number | null>(null);
   const [followingCount, setFollowingCount] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  const [showQR, setShowQR] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (!ndk || !pubkey) return;
@@ -75,12 +80,42 @@ export function SellerProfile() {
   const name = profile?.name || profile?.displayName || "Anonymous user";
   const bio = profile?.about || "This user still didn't add a bio.";
 
+  const npub = pubkey ? new NDKUser({ pubkey }).npub : "";
+  const shareUrl = `${window.location.origin}/#/seller/${pubkey}`;
+
+  const handleCopyNpub = () => {
+    if (!npub) return;
+    navigator.clipboard.writeText(npub);
+    setCopied(true);
+    toast.success("npub copied to clipboard!");
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   return (
     <div className="max-w-4xl mx-auto space-y-8">
       <section
         className="bg-card p-6 rounded-xl border border-border shadow-sm flex flex-col md:flex-row items-center 
-      md:items-start gap-6"
+      md:items-start gap-6 relative"
       >
+        <div className="absolute top-4 right-4 flex gap-2">
+          <button
+            onClick={() => setShowQR(true)}
+            className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-full transition-colors 
+            cursor-pointer"
+            title="Share Profile (QR Code)"
+          >
+            <Share2 className="w-5 h-5" />
+          </button>
+          <button
+            onClick={handleCopyNpub}
+            className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-full transition-colors 
+            cursor-pointer"
+            title="Copy npub"
+          >
+            <Copy className={`w-5 h-5 ${copied ? "text-green-500" : ""}`} />
+          </button>
+        </div>
+
         {avatar ? (
           <img
             src={avatar}
@@ -99,12 +134,12 @@ export function SellerProfile() {
         )}
 
         <div className="flex-1 text-center md:text-left">
-          <h2 className="text-2xl font-bold text-foreground">{name}</h2>
+          <h2 className="text-2xl font-bold text-foreground pr-16">{name}</h2>
 
           {profile?.nip05 && (
             <p
-              className="flex items-center justify-center md:justify-start gap-1.5 text-sm text-gray-600 dark:text-gray-500 
-            mt-1 font-medium"
+              className="flex items-center justify-center md:justify-start gap-1.5 text-sm text-gray-600 
+            dark:text-gray-500 mt-1 font-medium"
             >
               <BadgeCheck className="w-4 h-4" />
               {profile.nip05}
@@ -160,6 +195,39 @@ export function SellerProfile() {
           </div>
         )}
       </section>
+
+      {showQR && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50 animate-in fade-in duration-200">
+          <div
+            className="bg-card p-6 rounded-xl shadow-lg w-80 border border-border flex flex-col items-center relative 
+          animate-in zoom-in-95 duration-200"
+          >
+            <button
+              onClick={() => setShowQR(false)}
+              className="absolute top-4 right-4 text-muted-foreground hover:text-foreground rounded-full p-1 
+              hover:bg-muted transition-colors cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <h3 className="text-lg font-bold mb-4 text-foreground text-center">
+              Share Profile
+            </h3>
+            <div className="bg-white p-3 rounded-lg border border-border mb-4">
+              <QRCodeSVG
+                value={shareUrl}
+                size={176}
+                bgColor={"#ffffff"}
+                fgColor={"#000000"}
+                level={"L"}
+                includeMargin={false}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground text-center break-all px-2 select-all">
+              {shareUrl}
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

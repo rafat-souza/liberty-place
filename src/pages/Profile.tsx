@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { NDKEvent, type NDKUserProfile } from "@nostr-dev-kit/ndk";
 import toast from "react-hot-toast";
-import { Pencil, Check, X, Zap, BadgeCheck } from "lucide-react";
+import { Pencil, Check, X, Zap, BadgeCheck, Share2, Copy } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 
 import { useNDK } from "../providers/NDKProvider";
 import { useAuth } from "../providers/AuthProvider";
@@ -25,6 +26,9 @@ export function Profile() {
   const [editBio, setEditBio] = useState("");
   const [editLud16, setEditLud16] = useState("");
   const [editNip05, setEditNip05] = useState("");
+
+  const [showQR, setShowQR] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (!ndk || !currentUser) return;
@@ -158,24 +162,56 @@ export function Profile() {
   const name = profile?.name || profile?.displayName || "Anonymous User";
   const bio = profile?.about || "No biography provided.";
 
+  const npub = currentUser?.npub || "";
+  const shareUrl = currentUser
+    ? `${window.location.origin}/#/seller/${currentUser.pubkey}`
+    : "";
+
+  const handleCopyNpub = () => {
+    if (!npub) return;
+    navigator.clipboard.writeText(npub);
+    setCopied(true);
+    toast.success("npub copied to clipboard!");
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   return (
     <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in">
-      {/* Profile stats */}
       <section
-        className="bg-card p-6 rounded-xl border border-border shadow-sm flex flex-col md:flex-row items-center md:items-start 
-      gap-6 relative"
+        className="bg-card p-6 rounded-xl border border-border shadow-sm flex flex-col md:flex-row items-center 
+      md:items-start gap-6 relative"
       >
         <div className="absolute top-4 right-4 flex gap-2">
           {!isEditing ? (
-            <button
-              onClick={handleStartEdit}
-              className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-full transition-colors cursor-pointer"
-              title="Edit Profile"
-            >
-              <Pencil className="w-5 h-5" />
-            </button>
+            <>
+              <button
+                onClick={() => setShowQR(true)}
+                className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-full transition-colors 
+                cursor-pointer"
+                title="Share Profile (QR Code)"
+              >
+                <Share2 className="w-5 h-5" />
+              </button>
+              <button
+                onClick={handleCopyNpub}
+                className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-full transition-colors 
+                cursor-pointer"
+                title="Copy npub"
+              >
+                <Copy className={`w-5 h-5 ${copied ? "text-green-500" : ""}`} />
+              </button>
+              <button
+                onClick={handleStartEdit}
+                className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-full transition-colors 
+                cursor-pointer"
+                title="Edit Profile"
+              >
+                <Pencil className="w-5 h-5" />
+              </button>
+            </>
           ) : (
             <>
+              {/* Botões visíveis APENAS quando ESTÁ editando */}
               <button
                 onClick={handleCancelEdit}
                 disabled={isSaving}
@@ -241,8 +277,8 @@ export function Profile() {
                   value={editNip05}
                   onChange={(e) => setEditNip05(e.target.value)}
                   disabled={isSaving}
-                  className="w-full px-3 py-2 rounded-md bg-background border border-input text-sm focus:outline-none focus:ring-2 
-                  focus:ring-primary disabled:opacity-50"
+                  className="w-full px-3 py-2 rounded-md bg-background border border-input text-sm focus:outline-none 
+                  focus:ring-2 focus:ring-primary disabled:opacity-50"
                   placeholder="name@domain.com"
                 />
               </div>
@@ -255,8 +291,8 @@ export function Profile() {
                   value={editLud16}
                   onChange={(e) => setEditLud16(e.target.value)}
                   disabled={isSaving}
-                  className="w-full px-3 py-2 rounded-md bg-background border border-input text-sm focus:outline-none focus:ring-2 
-                  focus:ring-primary disabled:opacity-50"
+                  className="w-full px-3 py-2 rounded-md bg-background border border-input text-sm focus:outline-none 
+                  focus:ring-2 focus:ring-primary disabled:opacity-50"
                   placeholder="name@getalby.com"
                 />
               </div>
@@ -277,12 +313,14 @@ export function Profile() {
             </div>
           ) : (
             <div className="pr-10">
-              <h2 className="text-2xl font-bold text-foreground">{name}</h2>
+              <h2 className="text-2xl font-bold text-foreground pr-24">
+                {name}
+              </h2>
 
               {profile?.nip05 && (
                 <p
-                  className="flex items-center justify-center md:justify-start gap-1.5 text-sm text-gray-600 dark:text-gray-500 
-                mt-1 font-medium"
+                  className="flex items-center justify-center md:justify-start gap-1.5 text-sm text-gray-600 
+                dark:text-gray-500 mt-1 font-medium"
                 >
                   <BadgeCheck className="w-4 h-4" />
                   {profile.nip05}
@@ -323,7 +361,6 @@ export function Profile() {
         </div>
       </section>
 
-      {/* Product Listing */}
       <section>
         <h3 className="text-xl font-bold mb-4 border-b border-border pb-2">
           My Listings
@@ -371,7 +408,6 @@ export function Profile() {
         )}
       </section>
 
-      {/* Exclusion Modal */}
       {listingToDelete && (
         <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
           <div className="bg-card p-6 rounded-lg shadow-lg w-96 border border-border">
@@ -397,6 +433,39 @@ export function Profile() {
                 Delete
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {showQR && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50 animate-in fade-in duration-200">
+          <div
+            className="bg-card p-6 rounded-xl shadow-lg w-80 border border-border flex flex-col items-center relative 
+          animate-in zoom-in-95 duration-200"
+          >
+            <button
+              onClick={() => setShowQR(false)}
+              className="absolute top-4 right-4 text-muted-foreground hover:text-foreground rounded-full p-1 hover:bg-muted 
+              transition-colors cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <h3 className="text-lg font-bold mb-4 text-foreground text-center">
+              Share Profile
+            </h3>
+            <div className="bg-white p-3 rounded-lg border border-border mb-4">
+              <QRCodeSVG
+                value={shareUrl}
+                size={176}
+                bgColor={"#ffffff"}
+                fgColor={"#000000"}
+                level={"L"}
+                includeMargin={false}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground text-center break-all px-2 select-all">
+              {shareUrl}
+            </p>
           </div>
         </div>
       )}
