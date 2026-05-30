@@ -16,33 +16,6 @@ export function Settings() {
 
       <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
         <div className="divide-y divide-border">
-          <div className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors">
-            <div className="flex items-center gap-4">
-              <div className="p-2 bg-primary/10 rounded-lg">
-                {theme === "dark" ? (
-                  <Moon className="w-6 h-6 text-primary" />
-                ) : (
-                  <Sun className="w-6 h-6 text-primary" />
-                )}
-              </div>
-              <div>
-                <h2 className="text-lg font-semibold text-foreground">
-                  Appearance
-                </h2>
-                <p className="text-sm text-muted-foreground">
-                  Toggle between dark and light mode
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              className="px-4 py-2 border border-border rounded-md hover:bg-muted font-medium text-sm text-foreground 
-              transition-colors cursor-pointer"
-            >
-              {theme === "dark" ? "Light Mode" : "Dark Mode"}
-            </button>
-          </div>
-
           <Link
             to="/settings/relays"
             className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors"
@@ -82,6 +55,33 @@ export function Settings() {
             </div>
             <ChevronRight className="w-5 h-5 text-muted-foreground" />
           </Link>
+
+          <div className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors">
+            <div className="flex items-center gap-4">
+              <div className="p-2 bg-primary/10 rounded-lg">
+                {theme === "dark" ? (
+                  <Moon className="w-6 h-6 text-primary" />
+                ) : (
+                  <Sun className="w-6 h-6 text-primary" />
+                )}
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-foreground">
+                  Appearance
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  Toggle between dark and light mode
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              className="px-4 py-2 border border-border rounded-md hover:bg-muted font-medium text-sm text-foreground 
+              transition-colors cursor-pointer"
+            >
+              {theme === "dark" ? "Light Mode" : "Dark Mode"}
+            </button>
+          </div>
         </div>
       </div>
     </div>

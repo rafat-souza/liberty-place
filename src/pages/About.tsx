@@ -4,7 +4,7 @@ export function About() {
   return (
     <div className="max-w-3xl mx-auto space-y-6 animate-in fade-in">
       <h1 className="text-4xl font-bold text-foreground">
-        About Nostr Marketplace
+        About Liberty Place
       </h1>
 
       <div className="prose prose-invert max-w-none text-muted-foreground">

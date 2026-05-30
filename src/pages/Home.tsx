@@ -1,11 +1,12 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import geohash from "ngeohash";
 import { NDKEvent, type NDKFilter } from "@nostr-dev-kit/ndk";
 import toast from "react-hot-toast";
-import { X } from "lucide-react";
+import { X, Globe, Users } from "lucide-react";
 
 import { useNDK } from "../providers/NDKProvider";
+import { useAuth } from "../providers/AuthProvider";
 import { ListingCard } from "../components/ListingCard";
 
 const CATEGORIES = [
@@ -20,7 +21,7 @@ const CATEGORIES = [
 
 export default function Home() {
   const { ndk, isConnected } = useNDK();
-  const hasFetchedRef = useRef(false);
+  const { currentUser } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [productSearch, setProductSearch] = useState("");
@@ -33,47 +34,94 @@ export default function Home() {
     maxPrice: "",
   });
 
-  const [isLoadingRecent, setIsLoadingRecent] = useState(true);
-  const [recentListings, setRecentListings] = useState<NDKEvent[]>([]);
-  const [isLoadingSearch, setIsLoadingSearch] = useState(false);
+  const activeTab = searchParams.get("tab") || "all";
+  const [followingPubkeys, setFollowingPubkeys] = useState<string[]>([]);
+  const [isFollowsLoaded, setIsFollowsLoaded] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [listings, setListings] = useState<NDKEvent[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
 
   useEffect(() => {
+    if (!ndk || !isConnected) return;
+    if (!currentUser) {
+      setFollowingPubkeys([]);
+      setIsFollowsLoaded(true);
+      return;
+    }
+
+    const fetchFollows = async () => {
+      try {
+        const events = await ndk.fetchEvents({
+          kinds: [3],
+          authors: [currentUser.pubkey],
+        });
+        if (events && events.size > 0) {
+          const latest = Array.from(events).sort(
+            (a, b) => (b.created_at || 0) - (a.created_at || 0),
+          )[0];
+          const pubkeys = latest.tags
+            .filter((t) => t[0] === "p")
+            .map((t) => t[1]);
+          setFollowingPubkeys(pubkeys);
+        } else {
+          setFollowingPubkeys([]);
+        }
+      } catch (e) {
+        console.error("Error fetching follows:", e);
+      } finally {
+        setIsFollowsLoaded(true);
+      }
+    };
+
+    setIsFollowsLoaded(false);
+    fetchFollows();
+  }, [ndk, isConnected, currentUser]);
+
+  useEffect(() => {
+    setProductSearch(searchParams.get("q") || "");
+    setRegion(searchParams.get("region") || "");
+    setFilters({
+      category: searchParams.get("category") || "",
+      currency: searchParams.get("currency") || "",
+      minPrice: searchParams.get("minPrice") || "",
+      maxPrice: searchParams.get("maxPrice") || "",
+    });
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (!ndk || !isConnected || !isFollowsLoaded) return;
+
     const q = searchParams.get("q") || "";
     const loc = searchParams.get("region") || "";
     const cat = searchParams.get("category") || "";
     const minP = searchParams.get("minPrice") || "";
     const maxP = searchParams.get("maxPrice") || "";
     const curr = searchParams.get("currency") || "";
+    const tab = searchParams.get("tab") || "all";
 
-    setProductSearch(q);
-    setRegion(loc);
-    setFilters({
-      category: cat,
-      currency: curr,
-      minPrice: minP,
-      maxPrice: maxP,
-    });
+    const isSearching = !!(q || loc || cat || minP || maxP || curr);
+    setHasSearched(isSearching);
 
-    if (!q && !loc && !cat && !minP && !maxP && !curr) {
-      setHasSearched(false);
+    const fetchListings = async () => {
+      setIsLoading(true);
       setListings([]);
-      return;
-    }
 
-    if (!ndk || !isConnected) return;
-
-    const executeSearch = async () => {
-      setIsLoadingSearch(true);
-      setListings([]);
-      setHasSearched(true);
+      if (tab === "following") {
+        if (!currentUser || followingPubkeys.length === 0) {
+          setIsLoading(false);
+          return;
+        }
+      }
 
       try {
         const filter: NDKFilter = {
           kinds: [30402],
           limit: 500,
         };
+
+        if (tab === "following") {
+          filter.authors = followingPubkeys;
+        }
 
         if (cat) {
           filter["#t"] = [
@@ -93,7 +141,7 @@ export default function Home() {
 
           if (!geoData || geoData.length === 0) {
             toast.error("Region not found");
-            setIsLoadingSearch(false);
+            setIsLoading(false);
             return;
           }
 
@@ -133,7 +181,6 @@ export default function Home() {
           fetchedListings = fetchedListings.filter((event) => {
             const title = event.tags.find((t) => t[0] === "title")?.[1] || "";
             const content = event.content || "";
-
             return (
               normalizeStr(title).includes(searchNormalized) ||
               normalizeStr(content).includes(searchNormalized)
@@ -179,59 +226,34 @@ export default function Home() {
           });
         }
 
+        if (!isSearching) {
+          fetchedListings = fetchedListings.slice(0, 20);
+        }
+
         setListings(fetchedListings);
       } catch (error) {
         console.error("Failed on searching for listings: ", error);
         toast.error("Error performing search");
       } finally {
-        setIsLoadingSearch(false);
+        setIsLoading(false);
       }
     };
 
-    executeSearch();
-  }, [searchParams, ndk, isConnected]);
-
-  useEffect(() => {
-    if (!ndk || !isConnected || hasFetchedRef.current) return;
-
-    hasFetchedRef.current = true;
-
-    const fetchRecentListings = async () => {
-      setIsLoadingRecent(true);
-      try {
-        const filter = {
-          kinds: [30402],
-          limit: 500,
-        };
-
-        const fetchPromise = ndk.fetchEvents(filter);
-        const timeoutPromise = new Promise<Set<NDKEvent>>((resolve) =>
-          setTimeout(() => resolve(new Set()), 4000),
-        );
-
-        const events = await Promise.race([fetchPromise, timeoutPromise]);
-
-        let fetchedListings = Array.from(events).filter((event) =>
-          event.tags.some((t) => t[0] === "g"),
-        );
-
-        const sortedAndLimitedEvents = fetchedListings
-          .sort((a, b) => (b.created_at || 0) - (a.created_at || 0))
-          .slice(0, 20);
-
-        setRecentListings(sortedAndLimitedEvents);
-      } catch (error) {
-        console.error("Failed on fetching recent listings: ", error);
-      } finally {
-        setIsLoadingRecent(false);
-      }
-    };
-
-    fetchRecentListings();
-  }, [ndk, isConnected]);
+    fetchListings();
+  }, [
+    searchParams,
+    ndk,
+    isConnected,
+    isFollowsLoaded,
+    followingPubkeys,
+    currentUser,
+  ]);
 
   const handleSearch = () => {
     const params: Record<string, string> = {};
+
+    const currentTab = searchParams.get("tab");
+    if (currentTab) params.tab = currentTab;
 
     if (productSearch) params.q = productSearch;
     if (region) params.region = region;
@@ -252,7 +274,19 @@ export default function Home() {
       minPrice: "",
       maxPrice: "",
     });
-    setSearchParams({});
+
+    const currentTab = searchParams.get("tab");
+    setSearchParams(currentTab ? { tab: currentTab } : {});
+  };
+
+  const handleTabChange = (newTab: string) => {
+    const params = new URLSearchParams(searchParams);
+    if (newTab === "all") {
+      params.delete("tab");
+    } else {
+      params.set("tab", newTab);
+    }
+    setSearchParams(params);
   };
 
   return (
@@ -282,7 +316,7 @@ export default function Home() {
             )}
           </div>
 
-          <div className="relative flex-[1] flex items-center">
+          <div className="relative flex-1 flex items-center">
             <input
               type="text"
               value={region}
@@ -329,12 +363,11 @@ export default function Home() {
             <button
               onClick={handleSearch}
               disabled={
-                isLoadingSearch ||
-                (!region && !productSearch && !filters.category)
+                isLoading || (!region && !productSearch && !filters.category)
               }
               className="rounded bg-primary px-6 py-2 text-primary-foreground hover:bg-primary/90 disabled:opacity-50 cursor-pointer whitespace-nowrap font-medium"
             >
-              {isLoadingSearch ? "Searching..." : "Search"}
+              {isLoading ? "Searching..." : "Search"}
             </button>
 
             {hasSearched && (
@@ -428,39 +461,68 @@ export default function Home() {
         )}
       </section>
 
-      {hasSearched ? (
-        <section>
-          <h3 className="text-lg font-semibold mb-4">Search results</h3>
-          {listings.length === 0 && !isLoadingSearch && (
-            <p className="text-muted-foreground">
-              No products found matching your search.
-            </p>
-          )}
+      <div className="flex border-b border-border mt-2">
+        <button
+          onClick={() => handleTabChange("all")}
+          className={`flex items-center gap-2 py-3 px-6 font-medium text-sm transition-colors border-b-2 -mb-[1px] ${
+            activeTab === "all"
+              ? "border-primary text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground hover:border-border cursor-pointer"
+          }`}
+        >
+          <Globe className="w-4 h-4" />
+          Global
+        </button>
+        <button
+          onClick={() => handleTabChange("following")}
+          className={`flex items-center gap-2 py-3 px-6 font-medium text-sm transition-colors border-b-2 -mb-[1px] ${
+            activeTab === "following"
+              ? "border-primary text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground hover:border-border cursor-pointer"
+          }`}
+        >
+          <Users className="w-4 h-4" />
+          Following
+        </button>
+      </div>
 
+      <section>
+        <h3 className="text-lg font-semibold mb-4">
+          {hasSearched
+            ? "Search results"
+            : activeTab === "following"
+              ? "Recent from following"
+              : "Recent Listings"}
+        </h3>
+
+        {isLoading ? (
+          <p className="text-muted-foreground animate-pulse">
+            Loading products...
+          </p>
+        ) : activeTab === "following" && !currentUser ? (
+          <div className="text-center p-8 bg-muted/20 rounded-lg border border-border border-dashed">
+            <p className="text-muted-foreground">
+              Log in to see listings from people you follow.
+            </p>
+          </div>
+        ) : activeTab === "following" && followingPubkeys.length === 0 ? (
+          <div className="text-center p-8 bg-muted/20 rounded-lg border border-border border-dashed">
+            <p className="text-muted-foreground">
+              You are not following anyone yet.
+            </p>
+          </div>
+        ) : listings.length === 0 ? (
+          <div className="text-center p-8 bg-muted/20 rounded-lg border border-border border-dashed">
+            <p className="text-muted-foreground">No listings found.</p>
+          </div>
+        ) : (
           <div className="grid sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {listings.map((event) => (
               <ListingCard key={event.id} event={event} />
             ))}
           </div>
-        </section>
-      ) : (
-        <section>
-          <h3 className="text-lg font-semibold mb-4">Recent Listings</h3>
-          {isLoadingRecent ? (
-            <p className="text-muted-foreground animate-pulse">
-              Loading latest products...
-            </p>
-          ) : recentListings.length === 0 ? (
-            <p className="text-muted-foreground">No recent listings found.</p>
-          ) : (
-            <div className="grid sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {recentListings.map((event) => (
-                <ListingCard key={event.id} event={event} />
-              ))}
-            </div>
-          )}
-        </section>
-      )}
+        )}
+      </section>
     </div>
   );
 }
