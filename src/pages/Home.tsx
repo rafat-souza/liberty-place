@@ -91,6 +91,8 @@ export default function Home() {
   useEffect(() => {
     if (!ndk || !isConnected || !isFollowsLoaded) return;
 
+    let isMounted = true;
+
     const q = searchParams.get("q") || "";
     const loc = searchParams.get("region") || "";
     const cat = searchParams.get("category") || "";
@@ -108,7 +110,7 @@ export default function Home() {
 
       if (tab === "following") {
         if (!currentUser || followingPubkeys.length === 0) {
-          setIsLoading(false);
+          if (isMounted) setIsLoading(false);
           return;
         }
       }
@@ -140,8 +142,10 @@ export default function Home() {
           const geoData = await geoResponse.json();
 
           if (!geoData || geoData.length === 0) {
-            toast.error("Region not found");
-            setIsLoading(false);
+            if (isMounted) {
+              toast.error("Region not found");
+              setIsLoading(false);
+            }
             return;
           }
 
@@ -158,12 +162,10 @@ export default function Home() {
           filter["#g"] = finalHashes;
         }
 
-        const fetchPromise = ndk.fetchEvents(filter);
-        const timeoutPromise = new Promise<Set<NDKEvent>>((resolve) =>
-          setTimeout(() => resolve(new Set()), 4000),
-        );
+        const events = await ndk.fetchEvents(filter, { closeOnEose: true });
 
-        const events = await Promise.race([fetchPromise, timeoutPromise]);
+        if (!isMounted) return;
+
         let fetchedListings = Array.from(events).filter((event) =>
           event.tags.some((t) => t[0] === "g"),
         );
@@ -230,16 +232,24 @@ export default function Home() {
           fetchedListings = fetchedListings.slice(0, 20);
         }
 
-        setListings(fetchedListings);
+        if (isMounted) {
+          setListings(fetchedListings);
+        }
       } catch (error) {
-        console.error("Failed on searching for listings: ", error);
-        toast.error("Error performing search");
+        if (isMounted) {
+          console.error("Failed on searching for listings: ", error);
+          toast.error("Error performing search");
+        }
       } finally {
-        setIsLoading(false);
+        if (isMounted) setIsLoading(false);
       }
     };
 
     fetchListings();
+
+    return () => {
+      isMounted = false;
+    };
   }, [
     searchParams,
     ndk,
