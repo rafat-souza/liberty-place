@@ -1,16 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { NDKEvent, type NDKUserProfile, NDKUser } from "@nostr-dev-kit/ndk";
-import {
-  Zap,
-  BadgeCheck,
-  Share2,
-  Copy,
-  X,
-  UserPlus,
-  UserCheck,
-  UserMinus,
-} from "lucide-react";
+import { Zap, BadgeCheck, Share2, Copy, X } from "lucide-react";
 import toast from "react-hot-toast";
 import { QRCodeSVG } from "qrcode.react";
 
@@ -230,18 +221,23 @@ export function SellerProfile() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-8">
-      <section className="bg-card p-6 rounded-xl border border-border shadow-sm flex flex-col md:flex-row items-center md:items-start gap-6 relative">
+      <section
+        className="bg-card p-6 rounded-xl border border-border shadow-sm flex flex-col md:flex-row 
+      items-center md:items-start gap-6 relative"
+      >
         <div className="absolute top-4 right-4 flex gap-2">
           <button
             onClick={() => setShowQR(true)}
-            className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-full transition-colors cursor-pointer"
+            className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-full 
+            transition-colors cursor-pointer"
             title="Share Profile (QR Code)"
           >
             <Share2 className="w-5 h-5" />
           </button>
           <button
             onClick={handleCopyNpub}
-            className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-full transition-colors cursor-pointer"
+            className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-full 
+            transition-colors cursor-pointer"
             title="Copy npub"
           >
             <Copy className={`w-5 h-5 ${copied ? "text-green-500" : ""}`} />
@@ -255,7 +251,10 @@ export function SellerProfile() {
             className="w-32 h-32 rounded-full object-cover border-4 border-background shadow-md shrink-0"
           />
         ) : (
-          <div className="w-32 h-32 rounded-full bg-primary/10 flex items-center justify-center border-4 border-background shadow-md shrink-0">
+          <div
+            className="w-32 h-32 rounded-full bg-primary/10 flex items-center justify-center border-4 
+          border-background shadow-md shrink-0"
+          >
             <span className="text-4xl font-bold text-primary">
               {name.substring(0, 2).toUpperCase()}
             </span>
@@ -274,13 +273,14 @@ export function SellerProfile() {
                 onMouseEnter={() => isFollowing && setHoverUnfollow(true)}
                 onMouseLeave={() => isFollowing && setHoverUnfollow(false)}
                 disabled={isFollowLoading || !currentUser}
-                className={`flex items-center justify-center gap-2 px-4 py-1.5 rounded-full text-sm font-semibold transition-colors mt-2 md:mt-0 ${
-                  isFollowing
-                    ? hoverUnfollow
-                      ? "bg-destructive/10 text-destructive border border-destructive cursor-pointer"
-                      : "bg-muted text-foreground border border-border cursor-pointer"
-                    : "bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer"
-                }`}
+                className={`flex items-center justify-center gap-2 px-4 py-1.5 rounded-full text-sm 
+                  font-semibold transition-colors mt-2 md:mt-0 ${
+                    isFollowing
+                      ? hoverUnfollow
+                        ? "bg-destructive/10 text-destructive border border-destructive cursor-pointer"
+                        : "bg-muted text-foreground border border-border cursor-pointer"
+                      : "bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer"
+                  }`}
                 title={!currentUser ? "Log in to follow users" : ""}
               >
                 {isFollowLoading ? (
@@ -299,14 +299,20 @@ export function SellerProfile() {
           </div>
 
           {profile?.nip05 && (
-            <p className="flex items-center justify-center md:justify-start gap-1.5 text-sm text-green-600 dark:text-green-500 mt-1 font-medium">
+            <p
+              className="flex items-center justify-center md:justify-start gap-1.5 text-sm 
+            text-green-600 dark:text-green-500 mt-1 font-medium"
+            >
               <BadgeCheck className="w-4 h-4" />
               {profile.nip05}
             </p>
           )}
 
           {profile?.lud16 && (
-            <p className="flex items-center justify-center md:justify-start gap-1.5 text-sm text-yellow-500 mt-1 font-medium">
+            <p
+              className="flex items-center justify-center md:justify-start gap-1.5 text-sm text-yellow-500 
+            mt-1 font-medium"
+            >
               <Zap className="w-4 h-4 fill-yellow-500" />
               {profile.lud16}
             </p>
@@ -316,7 +322,10 @@ export function SellerProfile() {
             {bio}
           </p>
 
-          <div className="flex items-center justify-center md:justify-start gap-6 mt-4 pt-4 border-t border-border">
+          <div
+            className="flex items-center justify-center md:justify-start gap-6 mt-4 pt-4 border-t 
+          border-border"
+          >
             <div className="flex flex-col">
               <span className="text-lg font-bold text-foreground">
                 {followingCount !== null ? followingCount : "-"}
@@ -343,7 +352,10 @@ export function SellerProfile() {
         </h3>
 
         {listings.length === 0 ? (
-          <p className="text-muted-foreground bg-muted/20 p-6 rounded-lg text-center border border-border border-dashed">
+          <p
+            className="text-muted-foreground bg-muted/20 p-6 rounded-lg text-center border border-border 
+          border-dashed"
+          >
             This user still doesn't have active listings.
           </p>
         ) : (
@@ -356,11 +368,18 @@ export function SellerProfile() {
       </section>
 
       {showQR && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50 animate-in fade-in duration-200">
-          <div className="bg-card p-6 rounded-xl shadow-lg w-80 border border-border flex flex-col items-center relative animate-in zoom-in-95 duration-200">
+        <div
+          className="fixed inset-0 flex items-center justify-center bg-black/50 z-50 animate-in 
+        fade-in duration-200"
+        >
+          <div
+            className="bg-card p-6 rounded-xl shadow-lg w-80 border border-border flex flex-col 
+          items-center relative animate-in zoom-in-95 duration-200"
+          >
             <button
               onClick={() => setShowQR(false)}
-              className="absolute top-4 right-4 text-muted-foreground hover:text-foreground rounded-full p-1 hover:bg-muted transition-colors cursor-pointer"
+              className="absolute top-4 right-4 text-muted-foreground hover:text-foreground rounded-full 
+              p-1 hover:bg-muted transition-colors cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
@@ -385,8 +404,14 @@ export function SellerProfile() {
       )}
 
       {showUnfollowModal && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50 animate-in fade-in duration-200">
-          <div className="bg-card p-6 rounded-xl shadow-lg w-80 border border-border flex flex-col items-center animate-in zoom-in-95 duration-200 text-center">
+        <div
+          className="fixed inset-0 flex items-center justify-center bg-black/50 z-50 animate-in fade-in 
+        duration-200"
+        >
+          <div
+            className="bg-card p-6 rounded-xl shadow-lg w-80 border border-border flex flex-col 
+          items-center animate-in zoom-in-95 duration-200 text-center"
+          >
             <h3 className="text-lg font-bold mb-2 text-foreground">
               Unfollow {name}?
             </h3>
@@ -396,13 +421,15 @@ export function SellerProfile() {
             <div className="flex gap-3 w-full">
               <button
                 onClick={() => setShowUnfollowModal(false)}
-                className="flex-1 px-4 py-2 text-sm font-medium hover:bg-muted rounded-md transition-colors text-foreground cursor-pointer border border-input"
+                className="flex-1 px-4 py-2 text-sm font-medium hover:bg-muted rounded-md transition-colors 
+                text-foreground cursor-pointer border border-input"
               >
                 Cancel
               </button>
               <button
                 onClick={handleUnfollow}
-                className="flex-1 px-4 py-2 text-sm font-medium bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-md transition-colors cursor-pointer"
+                className="flex-1 px-4 py-2 text-sm font-medium bg-destructive text-destructive-foreground 
+                hover:bg-destructive/90 rounded-md transition-colors cursor-pointer"
               >
                 Unfollow
               </button>

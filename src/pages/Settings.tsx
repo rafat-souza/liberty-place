@@ -9,23 +9,39 @@ import {
   ShieldAlert,
 } from "lucide-react";
 import { useTheme } from "../providers/ThemeProvider";
+import { useAuth } from "../providers/AuthProvider";
 
 export function Settings() {
   const { theme, setTheme } = useTheme();
+  const { currentUser } = useAuth();
 
   const [showNsfw, setShowNsfw] = useState(false);
 
   useEffect(() => {
-    const savedNsfwPref = localStorage.getItem("app_show_nsfw");
+    if (!currentUser) {
+      setShowNsfw(false);
+      return;
+    }
+
+    const storageKey = `app_show_nsfw_${currentUser.pubkey}`;
+    const savedNsfwPref = localStorage.getItem(storageKey);
+
     if (savedNsfwPref === "true") {
       setShowNsfw(true);
+    } else {
+      setShowNsfw(false);
     }
-  }, []);
+  }, [currentUser]);
 
   const handleToggleNsfw = () => {
     const newValue = !showNsfw;
     setShowNsfw(newValue);
-    localStorage.setItem("app_show_nsfw", newValue.toString());
+
+    if (currentUser) {
+      const storageKey = `app_show_nsfw_${currentUser.pubkey}`;
+      localStorage.setItem(storageKey, newValue.toString());
+    } else {
+    }
   };
 
   return (
@@ -126,13 +142,16 @@ export function Settings() {
 
             <button
               onClick={handleToggleNsfw}
+              disabled={!currentUser}
               className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors 
-                cursor-pointer outline-none focus:outline-none select-none ${
+                ${!currentUser ? "opacity-50 cursor-not-allowed" : "cursor-pointer"} 
+                outline-none focus:outline-none select-none ${
                   showNsfw ? "bg-gray-400" : "bg-input dark:bg-zinc-700"
                 }`}
               style={{ WebkitTapHighlightColor: "transparent" }}
               role="switch"
               aria-checked={showNsfw}
+              title={!currentUser ? "Log in to change this setting" : ""}
             >
               <span className="sr-only">Show Sensitive Content</span>
               <span
