@@ -1,7 +1,16 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { NDKEvent, type NDKUserProfile, NDKUser } from "@nostr-dev-kit/ndk";
-import { Zap, BadgeCheck, Share2, Copy, X } from "lucide-react";
+import {
+  Zap,
+  BadgeCheck,
+  Share2,
+  Copy,
+  X,
+  UserPlus,
+  UserCheck,
+  UserMinus,
+} from "lucide-react";
 import toast from "react-hot-toast";
 import { QRCodeSVG } from "qrcode.react";
 
@@ -30,6 +39,15 @@ export function SellerProfile() {
   const [showQR, setShowQR] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  const [showNsfw, setShowNsfw] = useState(false);
+
+  useEffect(() => {
+    const savedNsfwPref = localStorage.getItem("app_show_nsfw");
+    if (savedNsfwPref === "true") {
+      setShowNsfw(true);
+    }
+  }, []);
+
   useEffect(() => {
     if (!ndk || !pubkey) return;
 
@@ -44,7 +62,20 @@ export function SellerProfile() {
         const userListings = await ndk
           .fetchEvents({ kinds: [30402], authors: [pubkey] })
           .catch(() => new Set<NDKEvent>());
-        setListings(Array.from(userListings));
+
+        let fetchedListings = Array.from(userListings);
+
+        if (!showNsfw) {
+          fetchedListings = fetchedListings.filter(
+            (event) => !event.tags.some((t) => t[0] === "content-warning"),
+          );
+        }
+
+        fetchedListings.sort(
+          (a, b) => (b.created_at || 0) - (a.created_at || 0),
+        );
+
+        setListings(fetchedListings);
 
         const followingEvent = await ndk
           .fetchEvents({ kinds: [3], authors: [pubkey] })
@@ -76,7 +107,7 @@ export function SellerProfile() {
     };
 
     fetchSellerData();
-  }, [ndk, pubkey]);
+  }, [ndk, pubkey, showNsfw]);
 
   useEffect(() => {
     if (!ndk || !currentUser || !pubkey) return;
