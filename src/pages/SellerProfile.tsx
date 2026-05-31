@@ -6,17 +6,24 @@ import toast from "react-hot-toast";
 import { QRCodeSVG } from "qrcode.react";
 
 import { useNDK } from "../providers/NDKProvider";
+import { useAuth } from "../providers/AuthProvider";
 import { ListingCard } from "../components/ListingCard";
 
 export function SellerProfile() {
   const { pubkey } = useParams<{ pubkey: string }>();
   const { ndk } = useNDK();
+  const { currentUser } = useAuth();
 
   const [profile, setProfile] = useState<NDKUserProfile | null>(null);
   const [listings, setListings] = useState<NDKEvent[]>([]);
   const [followersCount, setFollowersCount] = useState<number | null>(null);
   const [followingCount, setFollowingCount] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [isFollowLoading, setIsFollowLoading] = useState(false);
+  const [currentUserContactList, setCurrentUserContactList] =
+    useState<NDKEvent | null>(null);
 
   const [showQR, setShowQR] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -69,6 +76,70 @@ export function SellerProfile() {
     fetchSellerData();
   }, [ndk, pubkey]);
 
+  useEffect(() => {
+    if (!ndk || !currentUser || !pubkey) return;
+
+    const checkFollowStatus = async () => {
+      try {
+        const events = await ndk.fetchEvents({
+          kinds: [3],
+          authors: [currentUser.pubkey],
+        });
+
+        if (events && events.size > 0) {
+          const latestContactList = Array.from(events).sort(
+            (a, b) => (b.created_at || 0) - (a.created_at || 0),
+          )[0];
+
+          setCurrentUserContactList(latestContactList);
+
+          const isUserFollowing = latestContactList.tags.some(
+            (t) => t[0] === "p" && t[1] === pubkey,
+          );
+          setIsFollowing(isUserFollowing);
+        }
+      } catch (error) {
+        console.error("Error checking follow status:", error);
+      }
+    };
+
+    checkFollowStatus();
+  }, [ndk, currentUser, pubkey]);
+
+  const handleFollow = async () => {
+    if (!currentUser || !ndk || !pubkey || isFollowing) return;
+
+    setIsFollowLoading(true);
+    const toastId = toast.loading("Following user...");
+
+    try {
+      const newContactListEvent = new NDKEvent(ndk);
+      newContactListEvent.kind = 3;
+
+      let newTags = currentUserContactList
+        ? [...currentUserContactList.tags]
+        : [];
+
+      newTags.push(["p", pubkey, "", ""]);
+
+      newContactListEvent.tags = newTags;
+
+      await newContactListEvent.publish();
+
+      setIsFollowing(true);
+      setCurrentUserContactList(newContactListEvent);
+
+      setFollowersCount((prev) => (prev !== null ? prev + 1 : 1));
+
+      toast.success("User followed successfully!", { id: toastId });
+    } catch (error) {
+      console.error("Failed to follow user:", error);
+      toast.error("Failed to follow user. Try again.", { id: toastId });
+    } finally {
+      setIsFollowLoading(false);
+    }
+  };
+
   if (isLoading)
     return (
       <p className="p-8 text-center text-muted-foreground animate-pulse">
@@ -91,25 +162,22 @@ export function SellerProfile() {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const isSelfProfile = currentUser?.pubkey === pubkey;
+
   return (
     <div className="max-w-4xl mx-auto space-y-8">
-      <section
-        className="bg-card p-6 rounded-xl border border-border shadow-sm flex flex-col md:flex-row items-center 
-      md:items-start gap-6 relative"
-      >
+      <section className="bg-card p-6 rounded-xl border border-border shadow-sm flex flex-col md:flex-row items-center md:items-start gap-6 relative">
         <div className="absolute top-4 right-4 flex gap-2">
           <button
             onClick={() => setShowQR(true)}
-            className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-full transition-colors 
-            cursor-pointer"
+            className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-full transition-colors cursor-pointer"
             title="Share Profile (QR Code)"
           >
             <Share2 className="w-5 h-5" />
           </button>
           <button
             onClick={handleCopyNpub}
-            className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-full transition-colors 
-            cursor-pointer"
+            className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-full transition-colors cursor-pointer"
             title="Copy npub"
           >
             <Copy className={`w-5 h-5 ${copied ? "text-green-500" : ""}`} />
@@ -123,10 +191,7 @@ export function SellerProfile() {
             className="w-32 h-32 rounded-full object-cover border-4 border-background shadow-md shrink-0"
           />
         ) : (
-          <div
-            className="w-32 h-32 rounded-full bg-primary/10 flex items-center justify-center border-4 border-background 
-          shadow-md shrink-0"
-          >
+          <div className="w-32 h-32 rounded-full bg-primary/10 flex items-center justify-center border-4 border-background shadow-md shrink-0">
             <span className="text-4xl font-bold text-primary">
               {name.substring(0, 2).toUpperCase()}
             </span>
@@ -134,13 +199,33 @@ export function SellerProfile() {
         )}
 
         <div className="flex-1 text-center md:text-left">
-          <h2 className="text-2xl font-bold text-foreground pr-16">{name}</h2>
+          <div className="flex flex-col md:flex-row md:items-center gap-3 pr-16 mb-2">
+            <h2 className="text-2xl font-bold text-foreground">{name}</h2>
+
+            {!isSelfProfile && (
+              <button
+                onClick={handleFollow}
+                disabled={isFollowLoading || isFollowing || !currentUser}
+                className={`flex items-center justify-center gap-2 px-4 py-1.5 rounded-full text-sm font-semibold transition-colors mt-2 md:mt-0 ${
+                  isFollowing
+                    ? "bg-muted text-foreground border border-border cursor-default opacity-80"
+                    : "bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer"
+                }`}
+                title={!currentUser ? "Log in to follow users" : ""}
+              >
+                {isFollowLoading ? (
+                  "Following..."
+                ) : isFollowing ? (
+                  <>Following</>
+                ) : (
+                  <>Follow</>
+                )}
+              </button>
+            )}
+          </div>
 
           {profile?.nip05 && (
-            <p
-              className="flex items-center justify-center md:justify-start gap-1.5 text-sm text-gray-600 
-            dark:text-gray-500 mt-1 font-medium"
-            >
+            <p className="flex items-center justify-center md:justify-start gap-1.5 text-sm text-green-600 dark:text-green-500 mt-1 font-medium">
               <BadgeCheck className="w-4 h-4" />
               {profile.nip05}
             </p>
@@ -198,14 +283,10 @@ export function SellerProfile() {
 
       {showQR && (
         <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50 animate-in fade-in duration-200">
-          <div
-            className="bg-card p-6 rounded-xl shadow-lg w-80 border border-border flex flex-col items-center relative 
-          animate-in zoom-in-95 duration-200"
-          >
+          <div className="bg-card p-6 rounded-xl shadow-lg w-80 border border-border flex flex-col items-center relative animate-in zoom-in-95 duration-200">
             <button
               onClick={() => setShowQR(false)}
-              className="absolute top-4 right-4 text-muted-foreground hover:text-foreground rounded-full p-1 
-              hover:bg-muted transition-colors cursor-pointer"
+              className="absolute top-4 right-4 text-muted-foreground hover:text-foreground rounded-full p-1 hover:bg-muted transition-colors cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
