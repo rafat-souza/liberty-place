@@ -41,6 +41,15 @@ export default function Home() {
   const [listings, setListings] = useState<NDKEvent[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
 
+  const [showNsfw, setShowNsfw] = useState(false);
+
+  useEffect(() => {
+    const savedNsfwPref = localStorage.getItem("app_show_nsfw");
+    if (savedNsfwPref === "true") {
+      setShowNsfw(true);
+    }
+  }, []);
+
   useEffect(() => {
     if (!ndk || !isConnected) return;
     if (!currentUser) {
@@ -170,6 +179,12 @@ export default function Home() {
           event.tags.some((t) => t[0] === "g"),
         );
 
+        if (!showNsfw) {
+          fetchedListings = fetchedListings.filter(
+            (event) => !event.tags.some((t) => t[0] === "content-warning"),
+          );
+        }
+
         if (q) {
           const normalizeStr = (str: string) =>
             str
@@ -257,6 +272,7 @@ export default function Home() {
     isFollowsLoaded,
     followingPubkeys,
     currentUser,
+    showNsfw,
   ]);
 
   const handleSearch = () => {
@@ -307,7 +323,7 @@ export default function Home() {
         </h2>
 
         <div className="flex flex-col md:flex-row gap-3">
-          <div className="relative flex-[2] flex items-center">
+          <div className="relative flex-2 flex items-center">
             <input
               type="text"
               value={productSearch}
