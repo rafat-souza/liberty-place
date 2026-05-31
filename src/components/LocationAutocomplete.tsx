@@ -13,6 +13,8 @@ interface LocationOption {
     town?: string;
     village?: string;
     suburb?: string;
+    neighbourhood?: string;
+    quarter?: string;
     state?: string;
     country?: string;
   };
@@ -21,28 +23,42 @@ interface LocationOption {
 const formatLocation = (opt: LocationOption) => {
   if (!opt.address) return opt.display_name;
 
-  const local =
+  const neighborhood =
+    opt.address.neighbourhood ||
+    opt.address.suburb ||
+    opt.address.quarter ||
+    "";
+
+  const cityOrTown =
     opt.address.city ||
     opt.address.town ||
     opt.address.village ||
-    opt.address.suburb ||
     opt.name ||
     opt.display_name.split(",")[0];
+
   const state = opt.address.state || "";
   const country = opt.address.country || "";
 
   const parts: string[] = [];
 
-  if (local) parts.push(local.trim());
+  if (neighborhood && neighborhood.trim() !== cityOrTown.trim()) {
+    parts.push(neighborhood.trim());
+  }
+
+  if (cityOrTown) {
+    parts.push(cityOrTown.trim());
+  }
 
   if (state) {
-    if (opt.addresstype === "state" && state.trim() === local.trim()) {
-    } else {
+    if (opt.addresstype === "state" && state.trim() === cityOrTown.trim()) {
+    } else if (state.trim() !== cityOrTown.trim()) {
       parts.push(state.trim());
     }
   }
 
-  if (country) parts.push(country.trim());
+  if (country) {
+    parts.push(country.trim());
+  }
 
   return parts.join(", ");
 };
@@ -89,7 +105,7 @@ export function LocationAutocomplete({
       const response = await fetch(
         `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
           locationInput,
-        )}&email=${import.meta.env.VITE_NOMINATIM_EMAIL}&addressdetails=1`,
+        )}&email=${import.meta.env.VITE_NOMINATIM_EMAIL}&addressdetails=1&limit=10`,
       );
       const data = await response.json();
 
@@ -98,10 +114,11 @@ export function LocationAutocomplete({
         const seenNames = new Set<string>();
 
         for (const opt of data) {
-          const shortName = formatLocation(opt);
-          if (!seenNames.has(shortName)) {
-            seenNames.add(shortName);
-            uniqueOptions.push({ ...opt, display_name: shortName });
+          const formattedName = formatLocation(opt);
+
+          if (!seenNames.has(formattedName)) {
+            seenNames.add(formattedName);
+            uniqueOptions.push({ ...opt, display_name: formattedName });
           }
         }
 
@@ -119,10 +136,9 @@ export function LocationAutocomplete({
   };
 
   const handleSelectOption = (option: LocationOption) => {
-    const shortName = formatLocation(option);
     setLocationInput(option.display_name);
     setLocationOptions([]);
-    onSelect({ ...option, display_name: shortName });
+    onSelect(option);
   };
 
   return (
@@ -136,8 +152,7 @@ export function LocationAutocomplete({
             onSelect(null);
           }}
           placeholder={placeholder}
-          className="w-full p-2 rounded-l bg-background border border-input text-foreground focus:outline-none
-          "
+          className="w-full p-2 rounded-l bg-background border border-input text-foreground focus:outline-none"
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               e.preventDefault();
@@ -149,26 +164,21 @@ export function LocationAutocomplete({
           type="button"
           onClick={handleFetchLocationOptions}
           disabled={isSearchingLocation || !locationInput}
-          className="bg-secondary px-3 py-2 rounded-r border border-l-0 border-input hover:bg-secondary/80
-          disabled:opacity-50 text-secondary-foreground cursor-pointer"
+          className="bg-secondary px-3 py-2 rounded-r border border-l-0 border-input hover:bg-secondary/80 disabled:opacity-50 text-secondary-foreground cursor-pointer"
         >
           {isSearchingLocation ? "Searching..." : "Search"}
         </button>
       </div>
 
       {locationOptions.length > 0 && (
-        <ul
-          className="absolute z-10 mt-1 w-full max-h-60 overflow-y-auto bg-card border border-border
-        rounded shadow-lg"
-        >
+        <ul className="absolute z-10 mt-1 w-full max-h-60 overflow-y-auto bg-card border border-border rounded shadow-lg">
           {locationOptions.map((opt) => (
             <li
               key={opt.place_id}
               onClick={() => handleSelectOption(opt)}
-              className="p-3 hover:bg-accent hover:text-accent-foreground text-sm border-b border-border 
-              last:border-0 cursor-pointer"
+              className="p-3 hover:bg-accent hover:text-accent-foreground text-sm border-b border-border last:border-0 cursor-pointer"
             >
-              {formatLocation(opt)}
+              {opt.display_name}
             </li>
           ))}
         </ul>

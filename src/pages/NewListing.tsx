@@ -257,12 +257,15 @@ export function NewListing() {
             <option value="" disabled>
               Select a category
             </option>
+            <option value="Accessories">Accessories</option>
+            <option value="Clothing">Clothing</option>
+            <option value="Cosmetics">Cosmetics</option>
             <option value="Electronics">Electronics</option>
-            <option value="Vehicles">Vehicles</option>
+            <option value="Food">Food</option>
             <option value="Furniture">Furniture</option>
             <option value="Services">Services</option>
-            <option value="Food">Food</option>
-            <option value="Fashion">Fashion</option>
+            <option value="Toiletries">Toiletries</option>
+            <option value="Vehicles">Vehicles</option>
             <option value="Others">Others</option>
           </select>
         </div>

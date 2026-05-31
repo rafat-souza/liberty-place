@@ -10,12 +10,15 @@ import { useAuth } from "../providers/AuthProvider";
 import { ListingCard } from "../components/ListingCard";
 
 const CATEGORIES = [
+  "Accessories",
+  "Clothing",
+  "Cosmetics",
   "Electronics",
-  "Vehicles",
+  "Food",
   "Furniture",
   "Services",
-  "Food",
-  "Fashion",
+  "Toiletries",
+  "Vehicles",
   "Others",
 ];
 
