@@ -24,6 +24,8 @@ export function SellerProfile() {
   const [isFollowLoading, setIsFollowLoading] = useState(false);
   const [currentUserContactList, setCurrentUserContactList] =
     useState<NDKEvent | null>(null);
+  const [hoverUnfollow, setHoverUnfollow] = useState(false);
+  const [showUnfollowModal, setShowUnfollowModal] = useState(false);
 
   const [showQR, setShowQR] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -121,20 +123,51 @@ export function SellerProfile() {
         : [];
 
       newTags.push(["p", pubkey, "", ""]);
-
       newContactListEvent.tags = newTags;
 
       await newContactListEvent.publish();
 
       setIsFollowing(true);
       setCurrentUserContactList(newContactListEvent);
-
       setFollowersCount((prev) => (prev !== null ? prev + 1 : 1));
 
       toast.success("User followed successfully!", { id: toastId });
     } catch (error) {
       console.error("Failed to follow user:", error);
       toast.error("Failed to follow user. Try again.", { id: toastId });
+    } finally {
+      setIsFollowLoading(false);
+    }
+  };
+
+  const handleUnfollow = async () => {
+    if (!currentUser || !ndk || !pubkey || !currentUserContactList) return;
+
+    setIsFollowLoading(true);
+    setShowUnfollowModal(false);
+    const toastId = toast.loading("Unfollowing user...");
+
+    try {
+      const newContactListEvent = new NDKEvent(ndk);
+      newContactListEvent.kind = 3;
+
+      const newTags = currentUserContactList.tags.filter(
+        (t) => !(t[0] === "p" && t[1] === pubkey),
+      );
+
+      newContactListEvent.tags = newTags;
+      await newContactListEvent.publish();
+
+      setIsFollowing(false);
+      setCurrentUserContactList(newContactListEvent);
+      setHoverUnfollow(false);
+
+      setFollowersCount((prev) => (prev !== null && prev > 0 ? prev - 1 : 0));
+
+      toast.success("User unfollowed successfully!", { id: toastId });
+    } catch (error) {
+      console.error("Failed to unfollow user:", error);
+      toast.error("Failed to unfollow user. Try again.", { id: toastId });
     } finally {
       setIsFollowLoading(false);
     }
@@ -204,19 +237,29 @@ export function SellerProfile() {
 
             {!isSelfProfile && (
               <button
-                onClick={handleFollow}
-                disabled={isFollowLoading || isFollowing || !currentUser}
+                onClick={() =>
+                  isFollowing ? setShowUnfollowModal(true) : handleFollow()
+                }
+                onMouseEnter={() => isFollowing && setHoverUnfollow(true)}
+                onMouseLeave={() => isFollowing && setHoverUnfollow(false)}
+                disabled={isFollowLoading || !currentUser}
                 className={`flex items-center justify-center gap-2 px-4 py-1.5 rounded-full text-sm font-semibold transition-colors mt-2 md:mt-0 ${
                   isFollowing
-                    ? "bg-muted text-foreground border border-border cursor-default opacity-80"
+                    ? hoverUnfollow
+                      ? "bg-destructive/10 text-destructive border border-destructive cursor-pointer"
+                      : "bg-muted text-foreground border border-border cursor-pointer"
                     : "bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer"
                 }`}
                 title={!currentUser ? "Log in to follow users" : ""}
               >
                 {isFollowLoading ? (
-                  "Following..."
+                  "Updating..."
                 ) : isFollowing ? (
-                  <>Following</>
+                  hoverUnfollow ? (
+                    <>Unfollow</>
+                  ) : (
+                    <>Following</>
+                  )
                 ) : (
                   <>Follow</>
                 )}
@@ -306,6 +349,33 @@ export function SellerProfile() {
             <p className="text-xs text-muted-foreground text-center break-all px-2 select-all">
               {shareUrl}
             </p>
+          </div>
+        </div>
+      )}
+
+      {showUnfollowModal && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50 animate-in fade-in duration-200">
+          <div className="bg-card p-6 rounded-xl shadow-lg w-80 border border-border flex flex-col items-center animate-in zoom-in-95 duration-200 text-center">
+            <h3 className="text-lg font-bold mb-2 text-foreground">
+              Unfollow {name}?
+            </h3>
+            <p className="text-sm text-muted-foreground mb-6">
+              Their posts will no longer show up in your Following tab.
+            </p>
+            <div className="flex gap-3 w-full">
+              <button
+                onClick={() => setShowUnfollowModal(false)}
+                className="flex-1 px-4 py-2 text-sm font-medium hover:bg-muted rounded-md transition-colors text-foreground cursor-pointer border border-input"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleUnfollow}
+                className="flex-1 px-4 py-2 text-sm font-medium bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-md transition-colors cursor-pointer"
+              >
+                Unfollow
+              </button>
+            </div>
           </div>
         </div>
       )}
