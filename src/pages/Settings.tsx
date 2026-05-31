@@ -1,9 +1,32 @@
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Server, ChevronRight, UploadCloud, Moon, Sun } from "lucide-react";
+import {
+  Server,
+  ChevronRight,
+  UploadCloud,
+  Moon,
+  Sun,
+  ShieldAlert,
+} from "lucide-react";
 import { useTheme } from "../providers/ThemeProvider";
 
 export function Settings() {
   const { theme, setTheme } = useTheme();
+
+  const [showNsfw, setShowNsfw] = useState(false);
+
+  useEffect(() => {
+    const savedNsfwPref = localStorage.getItem("app_show_nsfw");
+    if (savedNsfwPref === "true") {
+      setShowNsfw(true);
+    }
+  }, []);
+
+  const handleToggleNsfw = () => {
+    const newValue = !showNsfw;
+    setShowNsfw(newValue);
+    localStorage.setItem("app_show_nsfw", newValue.toString());
+  };
 
   return (
     <div className="max-w-3xl mx-auto space-y-8 animate-in fade-in">
@@ -16,6 +39,7 @@ export function Settings() {
 
       <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
         <div className="divide-y divide-border">
+          {/* Relays */}
           <Link
             to="/settings/relays"
             className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors"
@@ -36,6 +60,7 @@ export function Settings() {
             <ChevronRight className="w-5 h-5 text-muted-foreground" />
           </Link>
 
+          {/* Media Servers */}
           <Link
             to="/settings/media"
             className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors"
@@ -56,6 +81,7 @@ export function Settings() {
             <ChevronRight className="w-5 h-5 text-muted-foreground" />
           </Link>
 
+          {/* Theme */}
           <div className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors">
             <div className="flex items-center gap-4">
               <div className="p-2 bg-primary/10 rounded-lg">
@@ -76,10 +102,44 @@ export function Settings() {
             </div>
             <button
               onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              className="px-4 py-2 border border-border rounded-md hover:bg-muted font-medium text-sm text-foreground 
-              transition-colors cursor-pointer"
+              className="px-4 py-2 border border-border rounded-md hover:bg-muted font-medium text-sm text-foreground transition-colors cursor-pointer"
             >
               {theme === "dark" ? "Light Mode" : "Dark Mode"}
+            </button>
+          </div>
+
+          {/* NSFW Content Filter */}
+          <div className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors">
+            <div className="flex items-center gap-4">
+              <div className="p-2 bg-primary/10 rounded-lg">
+                <ShieldAlert className="w-6 h-6 text-primary" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-foreground">
+                  Sensitive Content
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  Show listings marked as NSFW (Not Safe For Work)
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={handleToggleNsfw}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors 
+                cursor-pointer outline-none focus:outline-none select-none ${
+                  showNsfw ? "bg-gray-400" : "bg-input dark:bg-zinc-700"
+                }`}
+              style={{ WebkitTapHighlightColor: "transparent" }}
+              role="switch"
+              aria-checked={showNsfw}
+            >
+              <span className="sr-only">Show Sensitive Content</span>
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform shadow-sm ${
+                  showNsfw ? "translate-x-6" : "translate-x-1"
+                }`}
+              />
             </button>
           </div>
         </div>
