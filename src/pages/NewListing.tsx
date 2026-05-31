@@ -47,6 +47,7 @@ export function NewListing() {
     category: "",
     imageUrls: [],
   });
+  const [isNsfw, setIsNsfw] = useState(false);
   const navigate = useNavigate();
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -159,6 +160,10 @@ export function NewListing() {
         ["g", fullHash.substring(0, 7)],
         ["g", fullHash.substring(0, 8)],
       ];
+
+      if (isNsfw) {
+        tags.push(["content-warning", "NSFW"]);
+      }
 
       if (formData.category) {
         const normalizedCategory = formData.category
@@ -311,6 +316,28 @@ export function NewListing() {
           <p className="text-xs text-muted-foreground mt-1.5">
             Used to generate a geohash for local search.
           </p>
+        </div>
+
+        <div className="flex items-center gap-3 p-4 bg-muted/20 rounded-lg border border-border">
+          <input
+            type="checkbox"
+            id="nsfw"
+            checked={isNsfw}
+            onChange={(e) => setIsNsfw(e.target.checked)}
+            className="h-4 w-4 rounded border-input text-primary focus:ring-ring cursor-pointer"
+          />
+          <div>
+            <label
+              htmlFor="nsfw"
+              className="text-sm font-semibold text-foreground cursor-pointer"
+            >
+              Mark as Sensitive Content (NSFW)
+            </label>
+            <p className="text-xs text-muted-foreground">
+              Check this if your listing contains adult content, violence, or
+              sensitive items.
+            </p>
+          </div>
         </div>
 
         <div>
