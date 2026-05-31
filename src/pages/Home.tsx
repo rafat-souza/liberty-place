@@ -47,11 +47,14 @@ export default function Home() {
   const [showNsfw, setShowNsfw] = useState(false);
 
   useEffect(() => {
-    const savedNsfwPref = localStorage.getItem("app_show_nsfw");
-    if (savedNsfwPref === "true") {
-      setShowNsfw(true);
+    if (currentUser) {
+      const storageKey = `app_show_nsfw_${currentUser.pubkey}`;
+      const savedNsfwPref = localStorage.getItem(storageKey);
+      setShowNsfw(savedNsfwPref === "true");
+    } else {
+      setShowNsfw(false);
     }
-  }, []);
+  }, [currentUser]);
 
   useEffect(() => {
     if (!ndk || !isConnected) return;

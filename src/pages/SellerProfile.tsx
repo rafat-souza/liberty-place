@@ -33,11 +33,14 @@ export function SellerProfile() {
   const [showNsfw, setShowNsfw] = useState(false);
 
   useEffect(() => {
-    const savedNsfwPref = localStorage.getItem("app_show_nsfw");
-    if (savedNsfwPref === "true") {
-      setShowNsfw(true);
+    if (currentUser) {
+      const storageKey = `app_show_nsfw_${currentUser.pubkey}`;
+      const savedNsfwPref = localStorage.getItem(storageKey);
+      setShowNsfw(savedNsfwPref === "true");
+    } else {
+      setShowNsfw(false);
     }
-  }, []);
+  }, [currentUser]);
 
   useEffect(() => {
     if (!ndk || !pubkey) return;
@@ -301,7 +304,7 @@ export function SellerProfile() {
           {profile?.nip05 && (
             <p
               className="flex items-center justify-center md:justify-start gap-1.5 text-sm 
-            text-green-600 dark:text-green-500 mt-1 font-medium"
+            text-gray-600 dark:text-gray-500 mt-1 font-medium"
             >
               <BadgeCheck className="w-4 h-4" />
               {profile.nip05}
