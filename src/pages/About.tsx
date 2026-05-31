@@ -9,7 +9,7 @@ export function About() {
 
       <div className="prose prose-invert max-w-none text-muted-foreground">
         <p className="text-lg">
-          Nostr Marketplace is a decentralized platform connecting buyers and
+          Liberty Place is a decentralized platform connecting buyers and
           sellers near from each other directly using the Nostr protocol.
         </p>
         <h2 className="text-2xl font-semibold text-foreground mt-8 mb-4">
@@ -20,6 +20,24 @@ export function About() {
           can trade freely without intermediaries. By leveraging Nostr's
           cryptographic identities and decentralized relays, we ensure that your
           data and reputation remain in your hands.
+        </p>
+        <h2 className="text-2xl font-semibold text-foreground mt-8 mb-4">
+          What is Nostr?
+        </h2>
+        <p className="mb-4">
+          Nostr stands for "Notes and Other Stuff Transmitted by Relays". It is
+          an open-source, decentralized protocol designed for sharing data over
+          the internet. Unlike traditional platforms, Nostr is not owned by any
+          company or central authority.
+        </p>
+        <p>
+          Instead of creating an account with an email and password, you are
+          identified by a cryptographic key pair: a public key (which acts as
+          your username) and a private key (your password). Your data and
+          listings are distributed across independent servers called "relays".
+          This ensures that nobody can censor you, ban your account, or control
+          the market. Liberty Place simply acts as a decentralized window to
+          interact with this network.
         </p>
         <h2 className="text-2xl font-semibold text-foreground mt-8 mb-4">
           Who is Liberty Place for?
