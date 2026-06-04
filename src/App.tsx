@@ -10,6 +10,7 @@ import { useChatStore } from "./store/chatStore";
 import { useAuth } from "./providers/AuthProvider";
 import { Sidebar } from "./components/Sidebar";
 import LibertyPlaceLogo from "./assets/LibertyPlaceLogo.png";
+import { Footer } from "./components/Footer";
 
 export default function App() {
   const { isConnected } = useNDK();
@@ -134,6 +135,7 @@ export default function App() {
           <div className="container mx-auto pb-20 md:pb-0">
             <Outlet />
           </div>
+          <Footer />
         </main>
 
         <ChatSidebar />

@@ -1,4 +1,4 @@
-import { ChevronLeft, Scale } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 import { Link } from "react-router-dom";
 
 export function Terms() {
