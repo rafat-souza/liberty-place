@@ -8,13 +8,8 @@ import * as nip19 from "nostr-tools/nip19";
 import { useAuth } from "../providers/AuthProvider";
 
 export function LoginButton() {
-  const {
-    currentUser,
-    isLoggingIn,
-    loginWithExtension,
-    loginWithNsec,
-    logout,
-  } = useAuth();
+  const { currentUser, isLoggingIn, loginWithExtension, loginWithNsec } =
+    useAuth();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [nsecInput, setNsecInput] = useState("");
   const [profile, setProfile] = useState<NDKUserProfile | null>(null);
@@ -87,32 +82,23 @@ export function LoginButton() {
     const name = profile?.name || profile?.displayName || "Profile";
 
     return (
-      <div className="flex items-center gap-4">
-        <NavLink
-          to="/profile"
-          className="flex items-center gap-2 hover:bg-muted p-1.5 pr-4 rounded-full transition-colors border border-transparent hover:border-border"
-        >
-          {avatar ? (
-            <img
-              src={avatar}
-              alt={name}
-              className="w-8 h-8 rounded-full object-cover"
-            />
-          ) : (
-            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
-              {name.substring(0, 2).toUpperCase()}
-            </div>
-          )}
-          <span className="text-sm font-semibold text-foreground">{name}</span>
-        </NavLink>
-
-        <button
-          onClick={logout}
-          className="rounded bg-destructive px-4 py-2 font-medium text-destructive-foreground hover:bg-destructive/90 cursor-pointer"
-        >
-          Log out
-        </button>
-      </div>
+      <NavLink
+        to="/profile"
+        className="flex items-center gap-2 hover:bg-muted p-1.5 pr-4 rounded-full transition-colors border border-transparent hover:border-border shrink-0"
+      >
+        {avatar ? (
+          <img
+            src={avatar}
+            alt={name}
+            className="w-8 h-8 rounded-full object-cover"
+          />
+        ) : (
+          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
+            {name.substring(0, 2).toUpperCase()}
+          </div>
+        )}
+        <span className="text-sm font-semibold text-foreground">{name}</span>
+      </NavLink>
     );
   }
 
@@ -128,7 +114,6 @@ export function LoginButton() {
       {isModalOpen && (
         <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50 animate-in fade-in">
           <div className="bg-card p-6 rounded-lg shadow-lg w-[400px] max-w-[95vw] border border-border animate-in zoom-in-95">
-            {/* Modal */}
             {!newKeys ? (
               <>
                 <h2 className="text-xl font-bold mb-4">
@@ -200,7 +185,6 @@ export function LoginButton() {
                 </div>
               </>
             ) : (
-              /* Second screen */
               <div className="space-y-4">
                 <div className="text-center space-y-2">
                   <div className="w-12 h-12 rounded-full bg-green-500/10 text-green-500 flex items-center justify-center mx-auto mb-2">

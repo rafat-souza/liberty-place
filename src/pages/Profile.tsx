@@ -1,7 +1,16 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, type ChangeEvent } from "react";
 import { NDKEvent, type NDKUserProfile } from "@nostr-dev-kit/ndk";
 import toast from "react-hot-toast";
-import { Pencil, X, Zap, BadgeCheck, Share2, Copy, Camera } from "lucide-react";
+import {
+  Pencil,
+  X,
+  Zap,
+  BadgeCheck,
+  Share2,
+  Copy,
+  Camera,
+  LogOut,
+} from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 
 import { useNDK } from "../providers/NDKProvider";
@@ -12,7 +21,7 @@ import { ProfileListings } from "../components/ProfileListings";
 
 export function Profile() {
   const { ndk } = useNDK();
-  const { currentUser } = useAuth();
+  const { currentUser, logout } = useAuth();
 
   const [profile, setProfile] = useState<NDKUserProfile | null>(null);
   const [listings, setListings] = useState<NDKEvent[]>([]);
@@ -75,9 +84,7 @@ export function Profile() {
     fetchProfileData();
   }, [ndk, currentUser]);
 
-  const handlePhotoUpload = async (
-    event: React.ChangeEvent<HTMLInputElement>,
-  ) => {
+  const handlePhotoUpload = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file || !ndk || !currentUser) return;
 
@@ -162,9 +169,10 @@ export function Profile() {
 
       setEditPicture(imageUrl);
       toast.success("Photo uploaded! Click 'Save Changes'.", { id: toastId });
-    } catch (error: any) {
-      console.error("Upload error:", error);
-      toast.error(`Upload failed: ${error.message || "Try again."}`, {
+    } catch (error) {
+      const err = error as Error;
+      console.error("Upload error:", err);
+      toast.error(`Upload failed: ${err.message || "Try again."}`, {
         id: toastId,
       });
     } finally {
@@ -206,7 +214,7 @@ export function Profile() {
   return (
     <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in">
       <section className="bg-card p-6 rounded-xl border border-border shadow-sm flex flex-col md:flex-row items-center md:items-start gap-6 relative">
-        <div className="absolute top-4 right-4 flex gap-2">
+        <div className="absolute top-4 right-4 flex gap-2 items-center">
           {!isEditing && (
             <>
               <button
@@ -286,8 +294,10 @@ export function Profile() {
             }}
           />
         ) : (
-          <div className="flex-1 text-center md:text-left w-full pr-10">
-            <h2 className="text-2xl font-bold text-foreground pr-24">{name}</h2>
+          <div className="flex-1 text-center md:text-left w-full md:pr-10">
+            <h2 className="text-2xl font-bold text-foreground md:pr-24">
+              {name}
+            </h2>
 
             {profile?.nip05 && (
               <p className="flex items-center justify-center md:justify-start gap-1.5 text-sm text-gray-600 dark:text-gray-500 mt-1 font-medium">
@@ -328,6 +338,18 @@ export function Profile() {
           </div>
         )}
       </section>
+
+      {!isEditing && (
+        <div className="flex justify-center md:justify-end">
+          <button
+            onClick={logout}
+            className="flex items-center justify-center gap-2 w-full md:w-auto px-6 py-2.5 rounded-md border border-destructive text-destructive font-semibold hover:bg-destructive hover:text-white transition-colors cursor-pointer"
+          >
+            <LogOut className="w-4 h-4" />
+            Log out
+          </button>
+        </div>
+      )}
 
       <ProfileListings
         ndk={ndk}
