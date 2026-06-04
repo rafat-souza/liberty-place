@@ -2,7 +2,7 @@ import { NavLink } from "react-router-dom";
 import { GitBranch, Code, Server, ExternalLink } from "lucide-react";
 
 export function About() {
-  const APP_VERSION = "1.0.0";
+  const APP_VERSION = "0.1.0";
   const GITHUB_LINK = "https://github.com/rafat-souza/liberty-place";
 
   return (
