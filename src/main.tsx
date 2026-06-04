@@ -16,6 +16,7 @@ import { RelaySettings } from "./pages/RelaySettings.tsx";
 import { Wallet } from "./pages/Wallet.tsx";
 import { MediaSettings } from "./pages/MediaSettings.tsx";
 import { ThemeProvider } from "./providers/ThemeProvider.tsx";
+import { Terms } from "./pages/Terms.tsx";
 
 import "./index.css";
 
@@ -63,6 +64,10 @@ const router = createHashRouter([
       {
         path: "/wallet",
         element: <Wallet />,
+      },
+      {
+        path: "/terms",
+        element: <Terms />,
       },
     ],
   },
