@@ -1,6 +1,6 @@
 # Liberty Place
 
-A decentralized, peer-to-peer marketplace built on the [Nostr](https://nostr.com) protocol. Buy and sell goods locally without intermediaries, censorship, or central authority.
+A decentralized, peer-to-peer marketplace built on the [Nostr](https://nostr.org) protocol. Buy and sell goods locally without intermediaries, censorship, or central authority.
 
 ![Liberty Place](./src/assets/LibertyPlaceLogo.png)
 
