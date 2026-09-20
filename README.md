@@ -37,18 +37,18 @@ Liberty Place is an open-source web client that connects buyers and sellers dire
 
 ## Supported NIPs
 
-| NIP         | Description                               |
-| ----------- | ----------------------------------------- |
-| NIP-01      | Basic protocol flow & event format        |
-| NIP-02      | Contact list (follow / unfollow)          |
-| NIP-04      | Encrypted direct messages                 |
-| NIP-07      | Browser extension signer                  |
-| NIP-09      | Event deletion                            |
-| NIP-19      | bech32-encoded entities (npub, nsec)      |
-| NIP-47      | Nostr Wallet Connect (Lightning payments) |
-| NIP-65      | Relay List Metadata                       |
-| NIP-94 / 96 | Authenticated media upload                |
-| NIP-99      | Classified listings                       |
+| NIP    | Description                               |
+| ------ | ----------------------------------------- |
+| NIP-01 | Basic protocol flow & event format        |
+| NIP-02 | Contact list (follow / unfollow)          |
+| NIP-04 | Encrypted direct messages                 |
+| NIP-07 | Browser extension signer                  |
+| NIP-09 | Event deletion                            |
+| NIP-19 | bech32-encoded entities (npub, nsec)      |
+| NIP-47 | Nostr Wallet Connect (Lightning payments) |
+| NIP-65 | Relay List Metadata                       |
+| NIP-98 | HTTP Auth (Authenticated media upload)    |
+| NIP-99 | Classified listings                       |
 
 ## Getting Started
 

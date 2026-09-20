@@ -160,7 +160,7 @@ export function About() {
             <li className="flex items-start gap-2 bg-muted/20 p-2 rounded border border-border">
               <Code className="w-4 h-4 text-primary shrink-0 mt-0.5" />
               <span>
-                <strong>NIP-94 / 96:</strong> Authenticated Media Upload
+                <strong>NIP-98:</strong> HTTP Auth (Authenticated Media Upload)
               </span>
             </li>
             <li className="flex items-start gap-2 bg-muted/20 p-2 rounded border border-border">
