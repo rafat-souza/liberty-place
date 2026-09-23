@@ -24,7 +24,20 @@ export function ListingDetail() {
 
     const fetchListing = async () => {
       try {
-        const fetchedEvent = await ndk.fetchEvent({ ids: [id] });
+        ndk.connect().catch(() => {});
+
+        let fetchedEvent = null;
+        let attempts = 6;
+
+        while (attempts > 0 && !fetchedEvent) {
+          fetchedEvent = await ndk.fetchEvent({ ids: [id] });
+
+          if (fetchedEvent) break;
+
+          await new Promise((resolve) => setTimeout(resolve, 500));
+          attempts--;
+        }
+
         if (!fetchedEvent) {
           toast.error("Listing not found.");
           navigate("/");
@@ -84,6 +97,7 @@ export function ListingDetail() {
       addOrUpdateContact,
       setProductContext,
     } = useChatStore.getState();
+
     addOrUpdateContact(event.pubkey, {
       profile: profile || undefined,
     });
