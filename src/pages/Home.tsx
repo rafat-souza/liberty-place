@@ -201,7 +201,7 @@ export default function Home() {
     const fetchListings = async () => {
       setIsLoading(true);
       setListings([]);
-      accumulatedEventsRef.current.clear(); // Clear previous events
+      accumulatedEventsRef.current.clear();
 
       if (tab === "following") {
         if (!currentUser || followingPubkeys.length === 0) {
@@ -337,10 +337,6 @@ export default function Home() {
     setSearchParams(params);
   };
 
-  // --- NOVA REGRA DO BOTÃO "SEARCH" ---
-  // Antes, o botão ficava desabilitado (disabled) se não houvesse texto na barra principal
-  // ou não houvesse uma categoria selecionada.
-  // Agora, liberamos o botão se qualquer um dos filtros avançados (preço ou moeda) for preenchido.
   const isSearchDisabled =
     isLoading ||
     (!region &&
