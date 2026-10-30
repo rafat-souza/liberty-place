@@ -257,18 +257,12 @@ export default function Home() {
           filter["#g"] = finalHashes;
         }
 
-        // --- SUBSTITUIÇÃO: fetchEvents por subscribe ---
         const subscription = ndk.subscribe(filter, { closeOnEose: true });
 
         subscription.on("event", (event: NDKEvent) => {
           if (isMounted) {
-            // Remove o spinner de loading assim que o primeiro evento chega
             setIsLoading(false);
-
-            // Evita duplicatas usando o ID do evento como chave no Map
             accumulatedEventsRef.current.set(event.id, event);
-
-            // Processa e atualiza o estado a cada novo evento
             const processedListings = processEvents(
               accumulatedEventsRef.current,
             );
@@ -277,11 +271,8 @@ export default function Home() {
         });
 
         subscription.on("eose", () => {
-          // Quando todos os relays terminarem, garante que o loading sumiu
-          // (útil para caso não encontre nenhum resultado)
           if (isMounted) setIsLoading(false);
         });
-        // ------------------------------------------------
       } catch (error) {
         if (isMounted) {
           console.error("Failed on searching for listings: ", error);
@@ -345,6 +336,19 @@ export default function Home() {
     }
     setSearchParams(params);
   };
+
+  // --- NOVA REGRA DO BOTÃO "SEARCH" ---
+  // Antes, o botão ficava desabilitado (disabled) se não houvesse texto na barra principal
+  // ou não houvesse uma categoria selecionada.
+  // Agora, liberamos o botão se qualquer um dos filtros avançados (preço ou moeda) for preenchido.
+  const isSearchDisabled =
+    isLoading ||
+    (!region &&
+      !productSearch &&
+      !filters.category &&
+      !filters.minPrice &&
+      !filters.maxPrice &&
+      !filters.currency);
 
   return (
     <div className="flex flex-col gap-6">
@@ -419,9 +423,7 @@ export default function Home() {
 
             <button
               onClick={handleSearch}
-              disabled={
-                isLoading || (!region && !productSearch && !filters.category)
-              }
+              disabled={isSearchDisabled}
               className="rounded bg-primary px-6 py-2 text-primary-foreground hover:bg-primary/90 disabled:opacity-50 cursor-pointer whitespace-nowrap font-medium"
             >
               {isLoading && listings.length === 0 ? "Searching..." : "Search"}
