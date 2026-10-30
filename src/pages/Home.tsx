@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import geohash from "ngeohash";
 import { NDKEvent, type NDKFilter } from "@nostr-dev-kit/ndk";
@@ -45,6 +45,8 @@ export default function Home() {
   const [hasSearched, setHasSearched] = useState(false);
 
   const [showNsfw, setShowNsfw] = useState(false);
+
+  const accumulatedEventsRef = useRef(new Map() as Map<string, NDKEvent>);
 
   useEffect(() => {
     if (currentUser) {
@@ -119,9 +121,87 @@ export default function Home() {
     const isSearching = !!(q || loc || cat || minP || maxP || curr);
     setHasSearched(isSearching);
 
+    // Helper function to process and filter accumulated events
+    const processEvents = (eventsMap: Map<string, NDKEvent>) => {
+      let fetchedListings = Array.from(eventsMap.values()).filter((event) =>
+        event.tags.some((t) => t[0] === "g"),
+      );
+
+      if (!showNsfw) {
+        fetchedListings = fetchedListings.filter(
+          (event) => !event.tags.some((t) => t[0] === "content-warning"),
+        );
+      }
+
+      if (q) {
+        const normalizeStr = (str: string) =>
+          str
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .toLowerCase()
+            .trim();
+
+        const searchNormalized = normalizeStr(q);
+
+        fetchedListings = fetchedListings.filter((event) => {
+          const title = event.tags.find((t) => t[0] === "title")?.[1] || "";
+          const content = event.content || "";
+          return (
+            normalizeStr(title).includes(searchNormalized) ||
+            normalizeStr(content).includes(searchNormalized)
+          );
+        });
+
+        fetchedListings.sort((a, b) => {
+          const titleA = normalizeStr(
+            a.tags.find((t) => t[0] === "title")?.[1] || "",
+          );
+          const titleB = normalizeStr(
+            b.tags.find((t) => t[0] === "title")?.[1] || "",
+          );
+
+          const aHasTitleMatch = titleA.includes(searchNormalized);
+          const bHasTitleMatch = titleB.includes(searchNormalized);
+
+          if (aHasTitleMatch && !bHasTitleMatch) return -1;
+          if (!aHasTitleMatch && bHasTitleMatch) return 1;
+
+          return (b.created_at || 0) - (a.created_at || 0);
+        });
+      } else {
+        fetchedListings.sort(
+          (a, b) => (b.created_at || 0) - (a.created_at || 0),
+        );
+      }
+
+      if (minP || maxP || curr) {
+        fetchedListings = fetchedListings.filter((event) => {
+          const priceTag = event.tags.find((t) => t[0] === "price");
+          if (!priceTag || !priceTag[1]) return false;
+
+          if (curr && priceTag[2] !== curr) return false;
+
+          const itemPrice = parseFloat(priceTag[1]);
+          if (isNaN(itemPrice)) return false;
+
+          const min = minP ? parseFloat(minP) : 0;
+          const max = maxP ? parseFloat(maxP) : Infinity;
+
+          return itemPrice >= min && itemPrice <= max;
+        });
+      }
+
+      if (!isSearching) {
+        fetchedListings = fetchedListings.slice(0, 20);
+      }
+
+      return fetchedListings;
+    };
+
     const fetchListings = async () => {
       setIsLoading(true);
       setListings([]);
+      accumulatedEventsRef.current.clear(); // Clear previous events
 
       if (tab === "following") {
         if (!currentUser || followingPubkeys.length === 0) {
@@ -177,92 +257,37 @@ export default function Home() {
           filter["#g"] = finalHashes;
         }
 
-        const events = await ndk.fetchEvents(filter, { closeOnEose: true });
+        // --- SUBSTITUIÇÃO: fetchEvents por subscribe ---
+        const subscription = ndk.subscribe(filter, { closeOnEose: true });
 
-        if (!isMounted) return;
+        subscription.on("event", (event: NDKEvent) => {
+          if (isMounted) {
+            // Remove o spinner de loading assim que o primeiro evento chega
+            setIsLoading(false);
 
-        let fetchedListings = Array.from(events).filter((event) =>
-          event.tags.some((t) => t[0] === "g"),
-        );
+            // Evita duplicatas usando o ID do evento como chave no Map
+            accumulatedEventsRef.current.set(event.id, event);
 
-        if (!showNsfw) {
-          fetchedListings = fetchedListings.filter(
-            (event) => !event.tags.some((t) => t[0] === "content-warning"),
-          );
-        }
-
-        if (q) {
-          const normalizeStr = (str: string) =>
-            str
-              .normalize("NFD")
-              .replace(/[\u0300-\u036f]/g, "")
-              .toLowerCase()
-              .trim();
-
-          const searchNormalized = normalizeStr(q);
-
-          fetchedListings = fetchedListings.filter((event) => {
-            const title = event.tags.find((t) => t[0] === "title")?.[1] || "";
-            const content = event.content || "";
-            return (
-              normalizeStr(title).includes(searchNormalized) ||
-              normalizeStr(content).includes(searchNormalized)
+            // Processa e atualiza o estado a cada novo evento
+            const processedListings = processEvents(
+              accumulatedEventsRef.current,
             );
-          });
+            setListings(processedListings);
+          }
+        });
 
-          fetchedListings.sort((a, b) => {
-            const titleA = normalizeStr(
-              a.tags.find((t) => t[0] === "title")?.[1] || "",
-            );
-            const titleB = normalizeStr(
-              b.tags.find((t) => t[0] === "title")?.[1] || "",
-            );
-
-            const aHasTitleMatch = titleA.includes(searchNormalized);
-            const bHasTitleMatch = titleB.includes(searchNormalized);
-
-            if (aHasTitleMatch && !bHasTitleMatch) return -1;
-            if (!aHasTitleMatch && bHasTitleMatch) return 1;
-
-            return (b.created_at || 0) - (a.created_at || 0);
-          });
-        } else {
-          fetchedListings.sort(
-            (a, b) => (b.created_at || 0) - (a.created_at || 0),
-          );
-        }
-
-        if (minP || maxP || curr) {
-          fetchedListings = fetchedListings.filter((event) => {
-            const priceTag = event.tags.find((t) => t[0] === "price");
-            if (!priceTag || !priceTag[1]) return false;
-
-            if (curr && priceTag[2] !== curr) return false;
-
-            const itemPrice = parseFloat(priceTag[1]);
-            if (isNaN(itemPrice)) return false;
-
-            const min = minP ? parseFloat(minP) : 0;
-            const max = maxP ? parseFloat(maxP) : Infinity;
-
-            return itemPrice >= min && itemPrice <= max;
-          });
-        }
-
-        if (!isSearching) {
-          fetchedListings = fetchedListings.slice(0, 20);
-        }
-
-        if (isMounted) {
-          setListings(fetchedListings);
-        }
+        subscription.on("eose", () => {
+          // Quando todos os relays terminarem, garante que o loading sumiu
+          // (útil para caso não encontre nenhum resultado)
+          if (isMounted) setIsLoading(false);
+        });
+        // ------------------------------------------------
       } catch (error) {
         if (isMounted) {
           console.error("Failed on searching for listings: ", error);
           toast.error("Error performing search");
+          setIsLoading(false);
         }
-      } finally {
-        if (isMounted) setIsLoading(false);
       }
     };
 
@@ -399,7 +424,7 @@ export default function Home() {
               }
               className="rounded bg-primary px-6 py-2 text-primary-foreground hover:bg-primary/90 disabled:opacity-50 cursor-pointer whitespace-nowrap font-medium"
             >
-              {isLoading ? "Searching..." : "Search"}
+              {isLoading && listings.length === 0 ? "Searching..." : "Search"}
             </button>
 
             {hasSearched && (
@@ -527,7 +552,7 @@ export default function Home() {
               : "Recent Listings"}
         </h3>
 
-        {isLoading ? (
+        {isLoading && listings.length === 0 ? (
           <p className="text-muted-foreground animate-pulse">
             Loading products...
           </p>
