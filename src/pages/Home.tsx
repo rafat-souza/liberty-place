@@ -121,7 +121,6 @@ export default function Home() {
     const isSearching = !!(q || loc || cat || minP || maxP || curr);
     setHasSearched(isSearching);
 
-    // Helper function to process and filter accumulated events
     const processEvents = (eventsMap: Map<string, NDKEvent>) => {
       let fetchedListings = Array.from(eventsMap.values()).filter((event) =>
         event.tags.some((t) => t[0] === "g"),
