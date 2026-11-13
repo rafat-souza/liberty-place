@@ -113,7 +113,7 @@ The Nominatim API requires an email address for identification per their [usage 
 
 ### Relays
 
-Users can add or remove relays from the **Settings → Relays** page. Changes sync to the network via NIP-65.
+Users can add or remove relays from the **Settings → Relays** page. Changes sync to the network via NIP-65
 
 ### Default Media Server
 
