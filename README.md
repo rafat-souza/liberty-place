@@ -111,15 +111,7 @@ VITE_NOMINATIM_EMAIL=your@email.com
 
 The Nominatim API requires an email address for identification per their [usage policy](https://operations.osmfoundation.org/policies/nominatim/). Without it, location search still works but may be rate-limited.
 
-### Default Relays
-
-Out of the box, Liberty Place connects to:
-
-```
-wss://relay.damus.io
-wss://nos.lol
-wss://nostr.mom
-```
+### Relays
 
 Users can add or remove relays from the **Settings → Relays** page. Changes sync to the network via NIP-65.
 

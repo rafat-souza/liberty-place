@@ -18,9 +18,9 @@ const NDKContext = createContext<NDKContextType>({
 });
 
 const defaultRelays = [
-  "wss://relay.damus.io",
-  "wss://nos.lol",
-  "wss://nostr.mom",
+  "wss://relay.primal.net",
+  "wss://relay.snort.social",
+  "wss://offchain.pub",
 ];
 
 export const NDKProvider = ({ children }: { children: ReactNode }) => {
